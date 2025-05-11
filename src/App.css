@@ -132,3 +132,137 @@ footer {
   color: #94a3b8;
   text-align: center;
 }
+
+/* recoverpassword*/
+.recover-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+  padding: 20px;
+}
+
+.recover-box {
+  background-color: #ffffff;
+  padding: 48px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  max-width: 450px;
+  text-align: center;
+  transition: transform 0.3s ease;
+}
+
+.recover-box:hover {
+  transform: translateY(-5px);
+}
+
+.recover-box h2 {
+  margin-bottom: 24px;
+  font-size: 28px;
+  color: #1e293b;
+  font-weight: 700;
+}
+
+.recover-box p {
+  color: #64748b;
+  margin-bottom: 32px;
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.recover-box input {
+  width: 100%;
+  padding: 16px;
+  margin-bottom: 20px;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background-color: #f8fafc;
+}
+
+.recover-box input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+  background-color: #ffffff;
+}
+
+.recover-box button {
+  width: 100%;
+  padding: 16px;
+  background-color: #2563eb;
+  color: white;
+  font-weight: 600;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  margin-top: 10px;
+}
+
+.recover-box button:hover {
+  background-color: #1d4ed8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+}
+
+.recover-box button:active {
+  transform: translateY(0);
+}
+
+.error-message {
+  color: #ef4444;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+  padding: 12px;
+  background-color: #fef2f2;
+  border-radius: 8px;
+  border: 1px solid #fee2e2;
+}
+
+.success-message {
+  color: #059669;
+  font-size: 14px;
+  margin-bottom: 16px;
+  text-align: left;
+  padding: 12px;
+  background-color: #f0fdf4;
+  border-radius: 8px;
+  border: 1px solid #dcfce7;
+}
+
+.back-to-login {
+  display: inline-block;
+  margin-top: 24px;
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.3s ease;
+}
+
+.back-to-login:hover {
+  color: #1d4ed8;
+  text-decoration: underline;
+}
+
+/* Create User Form Styles */
+.success-message {
+  color: green;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+
+.error-message {
+  color: red;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+

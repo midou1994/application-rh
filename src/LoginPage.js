@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import "./App.css";
+import { Link } from "react-router-dom";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -62,10 +63,11 @@ const LoginPage = () => {
                 />
                 <span>Se souvenir de moi</span>
               </label>
-              <a href="#">Mot de passe oublié ?</a>
+              <Link to="/recover-password">Mot de passe oublié ?</Link>
             </div>
             <button type="submit">Sign In</button>
-            <p>Pas de compte ? <a href="#">Créer un compte</a></p>
+            <p>Pas de compte ? <Link to="/create-user">Créer un compte</Link></p>
+
             <footer>&copy; 2025 - Tous droits réservés</footer>
           </form>
         </div>
