@@ -135,7 +135,7 @@ const Dashboard = () => {
       });
     } finally {
       localStorage.removeItem("loggedUser");
-      navigate("/login");
+      navigate("/");
     }
   };
 
