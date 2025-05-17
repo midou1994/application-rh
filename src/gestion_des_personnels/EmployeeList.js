@@ -94,7 +94,7 @@ const EmployeeList = () => {
               {employees.map((employee) => (
                 <TableRow key={employee._id}>
                   <TableCell>
-                    <Avatar src={`http://localhost:5000/uploads/${employee.photo}`} />
+                    <Avatar src={`http://localhost:5000/images/${employee.photo}`} />
                   </TableCell>
                   <TableCell>{employee.matricule}</TableCell>
                   <TableCell>{employee.prenom} {employee.nom}</TableCell>

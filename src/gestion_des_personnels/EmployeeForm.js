@@ -82,7 +82,7 @@ const EmployeeForm = () => {
                 };
 
                 const url = id
-                    ? `http://localhost:5000/employes/updateEmployeWithImage/${id}`
+                    ? `http://localhost:5000/employe/updateEmployeWithImage/${id}`
                     : 'http://localhost:5000/employe/addEmployeWithImage';
 
                 await axios[id ? 'put' : 'post'](url, formData, config);
@@ -113,7 +113,7 @@ const EmployeeForm = () => {
                 });
 
                 setPreview(data.photo ?
-                    `http://localhost:5000/uploads/${data.photo}` : '');
+                    `http://localhost:5000/images/${data.photo}` : '');
             } catch (error) {
                 console.error('Erreur:', error);
                 navigate('/employes');
