@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Link } from 'react-router-dom';
 import "./App.css";
 
 const LoginPage = () => {
@@ -79,7 +80,7 @@ const LoginPage = () => {
                 />
                 <span>Se souvenir de moi</span>
               </label>
-              <a href="#">Mot de passe oublié ?</a>
+              <Link to="/recover-password">Mot de passe oublié ?</Link>
             </div>
 
             {error && <p className="error-msg">{error}</p>}
