@@ -5,10 +5,6 @@ import {
   Toolbar,
   Typography,
   Button,
-  Drawer,
-  List,
-  ListItem,
-  ListItemText,
   Box,
   Grid,
   Card,
@@ -17,6 +13,9 @@ import {
   IconButton,
   useMediaQuery,
   CssBaseline,
+  Paper,
+  Avatar,
+  useTheme,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -24,13 +23,19 @@ import {
   BeachAccess as CongesIcon,
   Event as EventsIcon,
   Menu as MenuIcon,
+  Logout as LogoutIcon,
 } from "@mui/icons-material";
-import { ThemeProvider, createTheme } from "@mui/material/styles";
-import { Link } from 'react-router-dom';
+import { ThemeProvider } from "@mui/material/styles";
+import Sidebar from './components/Sidebar';
+import Personnel from './components/Personnel';
+import Conges from './components/Conges';
+import JoursFeries from './components/JoursFeries';
+import DemandeConge from './components/DemandeConge';
 
 const Dashboard = () => {
   // États
   const [user, setUser] = useState(null);
+  const [employee, setEmployee] = useState(null);
   const [stats, setStats] = useState({
     employees: 0,
     demandes: 0,
@@ -40,11 +45,13 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [activeComponent, setActiveComponent] = useState("dashboard");
+  const [userRole, setUserRole] = useState('');
   
   // Hooks
   const isMobile = useMediaQuery("(max-width:600px)");
   const navigate = useNavigate();
-  const theme = createTheme();
+  const theme = useTheme();
   const drawerWidth = 240;
 
   // Gestion de la sidebar mobile
@@ -52,9 +59,17 @@ const Dashboard = () => {
     setMobileOpen(!mobileOpen);
   };
 
-  // Récupération des données utilisateur
+  // Handle menu item click
+  const handleMenuItemClick = (component) => {
+    setActiveComponent(component);
+    if (isMobile) {
+      setMobileOpen(false);
+    }
+  };
+
+  // Récupération des données utilisateur et employé
   useEffect(() => {
-    const fetchUser = async () => {
+    const fetchUserAndEmployee = async () => {
       const storedUser = JSON.parse(localStorage.getItem("loggedUser"));
       if (!storedUser?._id) {
         navigate("/login");
@@ -62,22 +77,36 @@ const Dashboard = () => {
       }
 
       try {
-        const res = await fetch(
-          `http://localhost:5000/users/getuserBYID/${storedUser._id}`,
-          { credentials: "include" }
-        );
+        const [userRes, employeeRes] = await Promise.all([
+          fetch(`http://localhost:5000/users/getuserBYID/${storedUser._id}`, { 
+            credentials: "include" 
+          }),
+          fetch(`http://localhost:5000/employe/byUser/${storedUser._id}`, {
+            credentials: "include"
+          })
+        ]);
         
-        if (!res.ok) throw new Error("Non autorisé");
+        if (!userRes.ok) throw new Error("Non autorisé");
         
-        const data = await res.json();
-        setUser(data);
+        const userData = await userRes.json();
+        setUser(userData);
+        setUserRole(userData.role);
+
+        if (employeeRes.ok) {
+          const employeeData = await employeeRes.json();
+          // Construct the full photo URL
+          if (employeeData.photo) {
+            employeeData.photo = `http://localhost:5000/images/${employeeData.photo}`;
+          }
+          setEmployee(employeeData);
+        }
       } catch (err) {
         localStorage.removeItem("loggedUser");
         navigate("/login");
       }
     };
 
-    fetchUser();
+    fetchUserAndEmployee();
   }, [navigate]);
 
   // Récupération des statistiques
@@ -89,33 +118,59 @@ const Dashboard = () => {
       setError(null);
 
       try {
-        const endpoints = [
-          { url: "/employe/getAllEmployes", key: "employees" },
-          { url: "/demandeconge/getAllDemandescoge", key: "demandes" },
-          { url: "/jourferie/getAllJourferie", key: "joursFeries" },
-        ];
+        if (user.role === "Employe" && employee?._id) {
+          // For employees, only fetch their own data
+          const [demandesRes, congesRes] = await Promise.all([
+            fetch(`http://localhost:5000/demandeconge/getDemandescogeByEmployee/${employee._id}`, { 
+              credentials: "include" 
+            }),
+            fetch(`http://localhost:5000/conge/getCongesByEmployee/${employee._id}`, {
+              credentials: "include"
+            })
+          ]);
 
-        const responses = await Promise.all(
-          endpoints.map(endpoint =>
-            fetch(`http://localhost:5000${endpoint.url}`, { credentials: "include" })
-          )
-        );
+          const [demandes, conges] = await Promise.all([
+            demandesRes.json(),
+            congesRes.json()
+          ]);
 
-        const data = await Promise.all(
-          responses.map(async (res, index) => {
-            if (!res.ok) throw new Error(`Erreur ${endpoints[index].key}`);
-            return res.json();
-          })
-        );
+          setStats({
+            employees: 0, // Don't show employee count for employees
+            demandes: demandes.length,
+            congesActifs: conges.filter(c => c.etat_conge === "Approuvé").length,
+            joursFeries: 0 // Don't show jours fériés for employees
+          });
+        } else {
+          // For Admin and RH, fetch all data
+          const endpoints = [
+            { url: "/employe/getAllEmployes", key: "employees" },
+            { url: "/demandeconge/getAllDemandescoge", key: "demandes" },
+            { url: "/conge/getAllConge", key: "conges" },
+            { url: "/jourferie/getAllJourferie", key: "joursFeries" },
+          ];
 
-        const [employees, demandes, joursFeries] = data;
+          const responses = await Promise.all(
+            endpoints.map(endpoint =>
+              fetch(`http://localhost:5000${endpoint.url}`, { credentials: "include" })
+            )
+          );
 
-        setStats({
-          employees: employees.length,
-          demandes: demandes.length,
-          congesActifs: demandes.filter(d => d.etat_conge === "Approuvé").length,
-          joursFeries: joursFeries.length,
-        });
+          const data = await Promise.all(
+            responses.map(async (res, index) => {
+              if (!res.ok) throw new Error(`Erreur ${endpoints[index].key}`);
+              return res.json();
+            })
+          );
+
+          const [employees, demandes, conges, joursFeries] = data;
+
+          setStats({
+            employees: employees.length,
+            demandes: demandes.length,
+            congesActifs: conges.filter(c => c.etat_conge === "Approuvé").length,
+            joursFeries: joursFeries.length,
+          });
+        }
       } catch (err) {
         setError(err.message);
       } finally {
@@ -124,7 +179,7 @@ const Dashboard = () => {
     };
 
     fetchStats();
-  }, [user]);
+  }, [user, employee]);
 
   // Déconnexion
   const handleLogout = async () => {
@@ -138,57 +193,6 @@ const Dashboard = () => {
       navigate("/");
     }
   };
-
-  // Composant Sidebar
-  const SidebarContent = ({ role }) => (
-  <div>
-    <Toolbar />
-    <List>
-      {[
-        { 
-          text: "Tableau de bord", 
-          icon: <PeopleIcon />,
-          path: "/"
-        },
-        role === "Admin" && { 
-          text: "Gestion des personnels", 
-          icon: <PeopleIcon />,
-          path: "/employes"
-        },
-        { 
-          text: "Gestion de Congés", 
-          icon: <CongesIcon />,
-          path: "/conges"
-        },
-       
-        role === "Admin" && { 
-          text: "Jours fériés", 
-          icon: <EventsIcon />,
-          path: "/jours-feries"
-        },
-        { 
-          text: "Demandes de congé", 
-          icon: <DemandesIcon />,
-          path: "/demandes-conge"
-        }
-        
-      ]
-        .filter(Boolean)
-        .map((item, index) => (
-          <ListItem 
-            button="true" 
-            key={index}
-            component={Link}
-            to={item.path}
-            onClick={() => isMobile && setMobileOpen(false)}
-          >
-            {item.icon}
-            <ListItemText primary={item.text} sx={{ ml: 2 }} />
-          </ListItem>
-        ))}
-    </List>
-  </div>
-)
 
   // Composant Carte de statistiques
   const StatCard = ({ title, value, icon: Icon, color }) => (
@@ -211,118 +215,61 @@ const Dashboard = () => {
     </Card>
   );
 
-  return (
-    <ThemeProvider theme={theme}>
-      <Box sx={{ display: "flex" }}>
-        <CssBaseline />
-        
-        {/* En-tête */}
-        <AppBar
-          position="fixed"
-          sx={{
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            ml: { sm: `${drawerWidth}px` },
-            bgcolor: "background.paper",
-            color: "text.primary",
-            boxShadow: 1
-          }}
-        >
-          <Toolbar>
-            <IconButton
-              color="inherit"
-              aria-label="open drawer"
-              edge="start"
-              onClick={handleDrawerToggle}
-              sx={{ mr: 2, display: { sm: "none" } }}
-            >
-              <MenuIcon />
-            </IconButton>
-            <Typography variant="h6" noWrap component="div">
-              Système de Gestion RH
-            </Typography>
-            <Box sx={{ flexGrow: 1 }} />
-            <Button 
-              color="inherit"
-              onClick={handleLogout}
-              sx={{ textTransform: "none" }}
-            >
-              Déconnexion
-            </Button>
-          </Toolbar>
-        </AppBar>
-
-        {/* Sidebar */}
-        <Box
-          component="nav"
-          sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
-        >
-          <Drawer
-            variant={isMobile ? "temporary" : "permanent"}
-            open={mobileOpen}
-            onClose={handleDrawerToggle}
-            ModalProps={{ keepMounted: true }}
-            sx={{
-              "& .MuiDrawer-paper": { 
-                width: drawerWidth,
-                boxSizing: "border-box",
-              },
-            }}
-          >
-            <SidebarContent role={user?.role} />
-          </Drawer>
-        </Box>
-
-        {/* Contenu principal */}
-        <Box
-          component="main"
-          sx={{
-            flexGrow: 1,
-            p: 3,
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-          }}
-        >
-          <Toolbar />
-
-          {user && (
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h4" gutterBottom>
-                Bonjour, {user.prenom} {user.nom}
-              </Typography>
-              <Typography variant="subtitle1" sx={{ color: "text.secondary" }}>
-                Rôle : {user.role}
-              </Typography>
-            </Box>
-          )}
-
-          {loading ? (
+  // Component content based on active component
+  const renderComponentContent = () => {
+    // For employees, only show their own data
+    if (user?.role === "Employe") {
+      switch (activeComponent) {
+        case "dashboard":
+          return (
             <Box sx={{ 
-              display: "flex", 
-              justifyContent: "center", 
-              alignItems: "center", 
-              height: "50vh"
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'center'
             }}>
-              <CircularProgress size={80} />
+              <Grid container spacing={3} sx={{ maxWidth: '1200px' }}>
+                <Grid item xs={12} sm={6}>
+                  <StatCard
+                    title="Mes demandes"
+                    value={stats.demandes}
+                    icon={DemandesIcon}
+                    color="linear-gradient(45deg, #FF4081 30%, #FF80AB 90%)"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <StatCard
+                    title="Mes congés actifs"
+                    value={stats.congesActifs}
+                    icon={CongesIcon}
+                    color="linear-gradient(45deg, #4CAF50 30%, #81C784 90%)"
+                  />
+                </Grid>
+              </Grid>
             </Box>
-          ) : error ? (
-            <Box sx={{ 
-              textAlign: "center", 
-              p: 4, 
-              bgcolor: "error.light", 
-              borderRadius: 2 
-            }}>
-              <Typography variant="h6" color="error" gutterBottom>
-                Erreur : {error}
-              </Typography>
-              <Button
-                variant="contained"
-                color="primary"
-                onClick={() => window.location.reload()}
-              >
-                Réessayer
-              </Button>
+          );
+        case "demandes":
+          return (
+            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+              <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+                <DemandeConge employeeId={employee?._id} />
+              </Box>
             </Box>
-          ) : (
-            <Grid container spacing={3}>
+          );
+        default:
+          return null;
+      }
+    }
+
+    // For Admin and RH, show all components
+    switch (activeComponent) {
+      case "dashboard":
+        return (
+          <Box sx={{ 
+            width: '100%',
+            display: 'flex',
+            justifyContent: 'center'
+          }}>
+            <Grid container spacing={3} sx={{ maxWidth: '1200px' }}>
               <Grid item xs={12} sm={6} lg={3}>
                 <StatCard
                   title="Employés"
@@ -356,7 +303,201 @@ const Dashboard = () => {
                 />
               </Grid>
             </Grid>
-          )}
+          </Box>
+        );
+      case "employees":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <Personnel />
+            </Box>
+          </Box>
+        );
+      case "conges":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <Conges />
+            </Box>
+          </Box>
+        );
+      case "joursFeries":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <JoursFeries />
+            </Box>
+          </Box>
+        );
+      case "demandes":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <DemandeConge />
+            </Box>
+          </Box>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <ThemeProvider theme={theme}>
+      <Box sx={{ display: "flex" }}>
+        <CssBaseline />
+        
+        {/* En-tête */}
+        <AppBar
+          position="fixed"
+          sx={{
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            ml: { sm: `${drawerWidth}px` },
+            bgcolor: "background.paper",
+            color: "text.primary",
+            boxShadow: 1
+          }}
+        >
+          <Toolbar>
+            <IconButton
+              color="inherit"
+              aria-label="open drawer"
+              edge="start"
+              onClick={handleDrawerToggle}
+              sx={{ mr: 2, display: { sm: "none" } }}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" noWrap component="div">
+              Système de Gestion RH
+            </Typography>
+            <Box sx={{ flexGrow: 1 }} />
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+              {employee?.photo && (
+                <Avatar
+                  src={employee.photo}
+                  alt={`${employee.prenom} ${employee.nom}`}
+                  sx={{ 
+                    width: 40, 
+                    height: 40,
+                    border: '2px solid #2196F3',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                  }}
+                />
+              )}
+              <Button 
+                color="inherit"
+                onClick={handleLogout}
+                startIcon={<LogoutIcon />}
+                sx={{ textTransform: "none" }}
+              >
+                Déconnexion
+              </Button>
+            </Box>
+          </Toolbar>
+        </AppBar>
+
+        {/* Sidebar */}
+        <Sidebar
+          mobileOpen={mobileOpen}
+          handleDrawerToggle={handleDrawerToggle}
+          drawerWidth={drawerWidth}
+          isMobile={isMobile}
+          onMenuItemClick={handleMenuItemClick}
+          userRole={userRole}
+        />
+
+        {/* Contenu principal */}
+        <Box
+          component="main"
+          sx={{
+  flexGrow: 1,
+  p: 3,
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  minHeight: '100vh',
+  boxSizing: 'border-box'
+}}
+
+        >
+          <Toolbar />
+
+          <Box sx={{ 
+            width: '100%',
+            maxWidth: '1200px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3
+          }}>
+            {user && (
+              <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 2,
+                flexWrap: 'wrap',
+                mb: 2
+              }}>
+                {employee?.photo && (
+                  <Avatar
+                    src={employee.photo}
+                    alt={`${employee.prenom} ${employee.nom}`}
+                    sx={{ 
+                      width: 80, 
+                      height: 80,
+                      border: '2px solid #2196F3',
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    }}
+                  />
+                )}
+                <Box>
+                  <Typography variant="h4" gutterBottom>
+                    Bonjour, {employee?.prenom || user.prenom} {employee?.nom || user.nom}
+                  </Typography>
+                  <Typography variant="subtitle1" sx={{ color: "text.secondary" }}>
+                    Rôle : {user.role}
+                  </Typography>
+                  {employee && (
+                    <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
+                      Poste : {employee.post}
+                    </Typography>
+                  )}
+                </Box>
+              </Box>
+            )}
+
+            {loading ? (
+              <Box sx={{ 
+                display: "flex", 
+                justifyContent: "center", 
+                alignItems: "center", 
+                height: "50vh"
+              }}>
+                <CircularProgress size={80} />
+              </Box>
+            ) : error ? (
+              <Box sx={{ 
+                textAlign: "center", 
+                p: 4, 
+                bgcolor: "error.light", 
+                borderRadius: 2
+              }}>
+                <Typography variant="h6" color="error" gutterBottom>
+                  Erreur : {error}
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  onClick={() => window.location.reload()}
+                >
+                  Réessayer
+                </Button>
+              </Box>
+            ) : (
+              renderComponentContent()
+            )}
+          </Box>
         </Box>
       </Box>
     </ThemeProvider>
