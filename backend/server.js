@@ -2,6 +2,7 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const cookieParser = require('cookie-parser');
+const path = require('path');
 
 const app = express();
 
@@ -11,7 +12,11 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve static files from uploads directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/rh_system', {
@@ -25,6 +30,7 @@ app.use('/employe', require('./routes/employe.routes'));
 app.use('/conge', require('./routes/conge.routes'));
 app.use('/demandeconge', require('./routes/demandeconge.routes'));
 app.use('/jourferie', require('./routes/jourferie.routes'));
+app.use('/candidat', require('./routes/candidat.routes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

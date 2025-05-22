@@ -31,6 +31,10 @@ import Personnel from './components/Personnel';
 import Conges from './components/Conges';
 import JoursFeries from './components/JoursFeries';
 import DemandeConge from './components/DemandeConge';
+import CandidatList from './gestion_des_personnels/CandidatList';
+import CandidatForm from './gestion_des_personnels/CandidatForm';
+import EntretienList from './gestion_des_personnels/EntretienList';
+import EntretienForm from './gestion_des_personnels/EntretienForm';
 
 const Dashboard = () => {
   // États
@@ -310,6 +314,22 @@ const Dashboard = () => {
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <Box sx={{ maxWidth: '1200px', width: '100%' }}>
               <Personnel />
+            </Box>
+          </Box>
+        );
+      case "candidats":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <CandidatList />
+            </Box>
+          </Box>
+        );
+      case "entretiens":
+        return (
+          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
+              <EntretienList />
             </Box>
           </Box>
         );

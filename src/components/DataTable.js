@@ -54,7 +54,7 @@ const DataTable = ({
         borderBottom: '1px solid rgba(0, 0, 0, 0.12)'
       }}>
         <Typography variant="h6">{title}</Typography>
-        {onAdd && (
+        
           <Tooltip title="Ajouter">
             <IconButton 
               color="primary" 
@@ -70,7 +70,7 @@ const DataTable = ({
               <AddIcon />
             </IconButton>
           </Tooltip>
-        )}
+        
       </Box>
       <TableContainer sx={{ maxHeight: 440 }}>
         <Table stickyHeader>
@@ -108,34 +108,30 @@ const DataTable = ({
                   const value = row[column.id];
                   return (
                     <TableCell key={column.id} align={column.align || 'left'}>
-                      {column.format ? column.format(value, row) : value}
+                      {column.format ? column.format(value) : value}
                     </TableCell>
                   );
                 })}
                 <TableCell align="center">
                   <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
-                    {onEdit && (
-                      <Tooltip title="Modifier">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => onEdit(row)}
-                          sx={{ color: 'primary.main' }}
-                        >
-                          <EditIcon />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {onDelete && (
-                      <Tooltip title="Supprimer">
-                        <IconButton 
-                          size="small" 
-                          onClick={() => onDelete(row)}
-                          sx={{ color: 'error.main' }}
-                        >
-                          <DeleteIcon />
-                        </IconButton>
-                      </Tooltip>
-                    )}
+                    <Tooltip title="Modifier">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onEdit(row)}
+                        sx={{ color: 'primary.main' }}
+                      >
+                        <EditIcon />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Supprimer">
+                      <IconButton 
+                        size="small" 
+                        onClick={() => onDelete(row)}
+                        sx={{ color: 'error.main' }}
+                      >
+                        <DeleteIcon />
+                      </IconButton>
+                    </Tooltip>
                   </Box>
                 </TableCell>
               </TableRow>

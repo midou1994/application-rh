@@ -18,6 +18,8 @@ import {
   Assignment as DemandesIcon,
   ExpandLess,
   ExpandMore,
+  PersonAdd as PersonAddIcon,
+  GroupAdd as GroupAddIcon,
 } from '@mui/icons-material';
 
 const Sidebar = ({ 
@@ -44,6 +46,23 @@ const Sidebar = ({
       text: "Gestion des personnels", 
       icon: <PeopleIcon />,
       component: "employees"
+    },
+    userRole === "Admin" && { 
+      text: "Gestion des candidats", 
+      icon: <PersonAddIcon />,
+      component: "candidats",
+      subItems: [
+        { 
+          text: "Liste des candidats", 
+          icon: <PersonAddIcon />,
+          component: "candidats"
+        },
+        { 
+          text: "Entretiens", 
+          icon: <GroupAddIcon />,
+          component: "entretiens"
+        }
+      ]
     },
     { 
       text: "Gestion de Congés", 
