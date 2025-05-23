@@ -19,13 +19,15 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  Rating
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Visibility as VisibilityIcon,
+  Assignment as AssignmentIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -40,6 +42,8 @@ const EntretienList = () => {
   const [selectedEntretien, setSelectedEntretien] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openFormDialog, setOpenFormDialog] = useState(false);
+  const [openFicheDialog, setOpenFicheDialog] = useState(false);
+  const [selectedFiche, setSelectedFiche] = useState(null);
   const [formData, setFormData] = useState({
     date: null,
     heure: '',
@@ -47,11 +51,56 @@ const EntretienList = () => {
     notes: '',
     candidat: '',
   });
+  const [ficheFormData, setFicheFormData] = useState({
+    recruteur: '',
+    technique_evaluation: '',
+    communication_evaluation: '',
+    motivation_evaluation: '',
+    preparation_evaluation: '',
+    commantaire_recruteur: '',
+    note: 0,
+    decision: 'Réserve'
+  });
+  const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchEntretiens();
     fetchCandidats();
+    // Récupérer les informations de l'utilisateur connecté
+    const fetchUserData = async () => {
+      try {
+        const storedUser = JSON.parse(localStorage.getItem("loggedUser"));
+        if (!storedUser?._id) {
+          console.error('No logged user found');
+          return;
+        }
+
+        const response = await fetch(`http://localhost:5000/users/getuserBYID/${storedUser._id}`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+
+        const userData = await response.json();
+        console.log('Fetched user data:', userData);
+
+        if (userData) {
+          setUser(userData);
+          // Pré-remplir le recruteur avec le nom et prénom de l'utilisateur connecté
+          setFicheFormData(prev => ({
+            ...prev,
+            recruteur: `${userData.prenom} ${userData.nom}`
+          }));
+        }
+      } catch (error) {
+        console.error('Error fetching user data:', error);
+      }
+    };
+
+    fetchUserData();
   }, []);
 
   const fetchEntretiens = async () => {
@@ -168,6 +217,115 @@ const EntretienList = () => {
     }
   };
 
+  const handleOpenFiche = (entretien) => {
+    console.log('Selected entretien:', entretien);
+    setSelectedEntretien(entretien);
+    
+    // S'assurer que le recruteur est toujours rempli avec les informations de l'utilisateur connecté
+    if (user) {
+      setFicheFormData(prev => ({
+        ...prev,
+        recruteur: `${user.prenom} ${user.nom}`
+      }));
+    }
+    
+    setOpenFicheDialog(true);
+  };
+
+  const handleFicheFormChange = (e) => {
+    const { name, value } = e.target;
+    setFicheFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleFicheSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (!selectedEntretien) {
+        throw new Error('Entretien non sélectionné');
+      }
+
+      if (!user) {
+        throw new Error('Utilisateur non connecté');
+      }
+
+      // S'assurer que le recruteur est toujours rempli avec les informations de l'utilisateur connecté
+      const ficheData = {
+        ...ficheFormData,
+        recruteur: `${user.prenom} ${user.nom}`,
+        candidat: selectedEntretien.candidat
+      };
+
+      console.log('Sending fiche data:', ficheData);
+
+      const response = await fetch('http://localhost:5000/ficheentretient/addFicheEntretient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(ficheData),
+        credentials: 'include'
+      });
+
+      const responseData = await response.json();
+      console.log('Server response:', responseData);
+
+      if (!response.ok) {
+        throw new Error(responseData.message || 'Erreur lors de l\'ajout de la fiche d\'entretien');
+      }
+
+      // Mettre à jour le statut du rendez-vous à "Terminé"
+      const updateData = {
+        date: selectedEntretien.date,
+        heure: selectedEntretien.heure,
+        type_entretien: selectedEntretien.type_entretien,
+        statut: 'Terminé',
+        notes: selectedEntretien.notes,
+        isActive: selectedEntretien.isActive,
+        candidat: selectedEntretien.candidat
+      };
+
+      console.log('Updating rendez-vous with data:', updateData);
+
+      const updateResponse = await fetch(`http://localhost:5000/rendezvous/updateRendezVous/${selectedEntretien._id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+        credentials: 'include'
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        throw new Error(errorData.message || 'Erreur lors de la mise à jour du statut du rendez-vous');
+      }
+
+      const updatedRendezVous = await updateResponse.json();
+      console.log('Updated rendez-vous:', updatedRendezVous);
+      
+      setOpenFicheDialog(false);
+      setFicheFormData({
+        recruteur: `${user.prenom} ${user.nom}`,
+        technique_evaluation: '',
+        communication_evaluation: '',
+        motivation_evaluation: '',
+        preparation_evaluation: '',
+        commantaire_recruteur: '',
+        note: 0,
+        decision: 'Réserve'
+      });
+
+      // Rafraîchir la liste des entretiens
+      await fetchEntretiens();
+    } catch (err) {
+      console.error('Error in handleFicheSubmit:', err);
+      setError(err.message);
+    }
+  };
+
   if (loading) return <CircularProgress />;
   if (error) return <Alert severity="error">{error}</Alert>;
 
@@ -211,10 +369,22 @@ const EntretienList = () => {
                   />
                 </TableCell>
                 <TableCell>
-                  <IconButton onClick={() => handleViewDetails(entretien)}>
+                  <IconButton 
+                    onClick={() => handleViewDetails(entretien)}
+                    disabled={entretien.statut === 'Terminé'}
+                  >
                     <VisibilityIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDelete(entretien._id)}>
+                  <IconButton 
+                    onClick={() => handleOpenFiche(entretien)}
+                    disabled={entretien.statut === 'Terminé'}
+                  >
+                    <AssignmentIcon />
+                  </IconButton>
+                  <IconButton 
+                    onClick={() => handleDelete(entretien._id)}
+                    disabled={entretien.statut === 'Terminé'}
+                  >
                     <DeleteIcon />
                   </IconButton>
                 </TableCell>
@@ -320,6 +490,108 @@ const EntretienList = () => {
         <DialogActions>
           <Button onClick={() => setOpenFormDialog(false)}>Annuler</Button>
           <Button onClick={handleSubmit} variant="contained">Ajouter</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog pour la fiche d'entretien */}
+      <Dialog open={openFicheDialog} onClose={() => setOpenFicheDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Fiche d'Entretien</DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleFicheSubmit} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Recruteur"
+              name="recruteur"
+              value={ficheFormData.recruteur}
+              disabled
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Technique"
+              name="technique_evaluation"
+              value={ficheFormData.technique_evaluation}
+              onChange={handleFicheFormChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Communication"
+              name="communication_evaluation"
+              value={ficheFormData.communication_evaluation}
+              onChange={handleFicheFormChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Motivation"
+              name="motivation_evaluation"
+              value={ficheFormData.motivation_evaluation}
+              onChange={handleFicheFormChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Préparation"
+              name="preparation_evaluation"
+              value={ficheFormData.preparation_evaluation}
+              onChange={handleFicheFormChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              label="Commentaire Recruteur"
+              name="commantaire_recruteur"
+              value={ficheFormData.commantaire_recruteur}
+              onChange={handleFicheFormChange}
+              multiline
+              rows={3}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              type="number"
+              label="Note"
+              name="note"
+              value={ficheFormData.note}
+              onChange={handleFicheFormChange}
+              inputProps={{ min: 0, max: 20 }}
+              sx={{ mb: 2 }}
+              required
+            />
+            <TextField
+              fullWidth
+              select
+              label="Décision"
+              name="decision"
+              value={ficheFormData.decision}
+              onChange={handleFicheFormChange}
+              sx={{ mb: 2 }}
+              required
+            >
+              <MenuItem value="Accepté">Accepté</MenuItem>
+              <MenuItem value="Rejeté">Rejeté</MenuItem>
+              <MenuItem value="Réserve">Réserve</MenuItem>
+            </TextField>
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenFicheDialog(false)}>Annuler</Button>
+          <Button onClick={handleFicheSubmit} variant="contained">Enregistrer</Button>
         </DialogActions>
       </Dialog>
     </Box>

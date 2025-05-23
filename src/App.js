@@ -17,6 +17,7 @@ import CandidatList from './gestion_des_personnels/CandidatList';
 import CandidatForm from './gestion_des_personnels/CandidatForm';
 import EntretienList from './gestion_des_personnels/EntretienList';
 import EntretienForm from './gestion_des_personnels/EntretienForm';
+import JoursFeriesList from './components/JoursFeriesList';
 
 // Protected Route component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -85,7 +86,7 @@ function App() {
         } />
         <Route path="/jours-feries" element={
           <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <JourFeries />
+            <JoursFeriesList />
           </ProtectedRoute>
         } />
         <Route path="/demandes-conge" element={

@@ -1,100 +1,45 @@
-import React, { useState } from 'react';
+import React from 'react';
 import {
   Drawer,
   List,
   ListItem,
   ListItemIcon,
   ListItemText,
-  Toolbar,
+  ListItemButton,
+  Collapse,
   Box,
   Divider,
-  Collapse,
+  Toolbar,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   People as PeopleIcon,
-  BeachAccess as CongesIcon,
-  Event as EventsIcon,
-  Assignment as DemandesIcon,
+  Assignment as AssignmentIcon,
+  Event as EventIcon,
   ExpandLess,
   ExpandMore,
+  Person as PersonIcon,
+  Work as WorkIcon,
+  CalendarMonth as CalendarIcon,
   PersonAdd as PersonAddIcon,
-  GroupAdd as GroupAddIcon,
 } from '@mui/icons-material';
 
-const Sidebar = ({ 
-  mobileOpen, 
-  handleDrawerToggle, 
-  drawerWidth, 
-  isMobile,
-  onMenuItemClick,
-  userRole 
-}) => {
-  const [openConges, setOpenConges] = useState(false);
+const Sidebar = ({ mobileOpen, handleDrawerToggle, drawerWidth, isMobile, onMenuItemClick, userRole }) => {
+  const [open, setOpen] = React.useState({
+    conges: false,
+    personnel: false,
+    candidats: false
+  });
 
-  const handleCongesClick = () => {
-    setOpenConges(!openConges);
+  const handleClick = (section) => {
+    setOpen(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
-  const menuItems = [
-    { 
-      text: "Tableau de bord", 
-      icon: <DashboardIcon />,
-      component: "dashboard"
-    },
-    userRole === "Admin" && { 
-      text: "Gestion des personnels", 
-      icon: <PeopleIcon />,
-      component: "employees"
-    },
-    userRole === "Admin" && { 
-      text: "Gestion des candidats", 
-      icon: <PersonAddIcon />,
-      component: "candidats",
-      subItems: [
-        { 
-          text: "Liste des candidats", 
-          icon: <PersonAddIcon />,
-          component: "candidats"
-        },
-        { 
-          text: "Entretiens", 
-          icon: <GroupAddIcon />,
-          component: "entretiens"
-        }
-      ]
-    },
-    { 
-      text: "Gestion de Congés", 
-      icon: <CongesIcon />,
-      component: "conges",
-      subItems: [
-        userRole === "Admin" && { 
-          text: "Liste des congés", 
-          icon: <CongesIcon />,
-          component: "conges"
-        },
-        userRole === "Admin" && { 
-          text: "Jours fériés", 
-          icon: <EventsIcon />,
-          component: "joursFeries"
-        },
-        { 
-          text: userRole === "Employe" ? "Mes congés" : "Demandes de congé", 
-          icon: <DemandesIcon />,
-          component: "demandes"
-        }
-      ].filter(Boolean)
-    },
-    userRole === "Employe" && {
-      text: "Mes congés",
-      icon: <CongesIcon />,
-      component: "employeeConges"
-    }
-  ].filter(Boolean);
-
   const drawer = (
-    <div>
+    <Box>
       <Toolbar sx={{ 
         background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
         color: 'white'
@@ -111,73 +56,128 @@ const Sidebar = ({
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item, index) => (
-          <React.Fragment key={index}>
-            <ListItem 
-              button 
-              onClick={item.subItems ? handleCongesClick : () => onMenuItemClick(item.component)}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                  '& .MuiListItemIcon-root': {
-                    color: '#2196F3'
-                  },
-                  '& .MuiListItemText-primary': {
-                    color: '#2196F3'
-                  }
-                }
-              }}
-            >
-              <ListItemIcon sx={{ color: 'text.secondary' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                primaryTypographyProps={{
-                  sx: { fontWeight: 500 }
-                }}
-              />
-              {item.subItems && (openConges ? <ExpandLess /> : <ExpandMore />)}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => onMenuItemClick('dashboard')}>
+            <ListItemIcon>
+              <DashboardIcon />
+            </ListItemIcon>
+            <ListItemText primary="Tableau de bord" />
+          </ListItemButton>
+        </ListItem>
+
+        {/* Gestion des personnels */}
+        {(userRole === 'Admin' || userRole === 'RH') && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => handleClick('personnel')}>
+                <ListItemIcon>
+                  <PeopleIcon />
+                </ListItemIcon>
+                <ListItemText primary="Gestion des personnels" />
+                {open.personnel ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
             </ListItem>
-            {item.subItems && (
-              <Collapse in={openConges} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {item.subItems.map((subItem, subIndex) => (
-                    <ListItem 
-                      button 
-                      key={subIndex}
-                      onClick={() => onMenuItemClick(subItem.component)}
-                      sx={{
-                        pl: 4,
-                        '&:hover': {
-                          backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                          '& .MuiListItemIcon-root': {
-                            color: '#2196F3'
-                          },
-                          '& .MuiListItemText-primary': {
-                            color: '#2196F3'
-                          }
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ color: 'text.secondary' }}>
-                        {subItem.icon}
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={subItem.text} 
-                        primaryTypographyProps={{
-                          sx: { fontWeight: 500 }
-                        }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Collapse>
+            <Collapse in={open.personnel} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                <ListItemButton 
+                  sx={{ pl: 4 }}
+                  onClick={() => onMenuItemClick('employees')}
+                >
+                  <ListItemIcon>
+                    <PersonIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Liste des employés" />
+                </ListItemButton>
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        {/* Gestion des candidats */}
+        {(userRole === 'Admin' || userRole === 'RH') && (
+          <>
+            <ListItem disablePadding>
+              <ListItemButton onClick={() => handleClick('candidats')}>
+                <ListItemIcon>
+                  <PersonAddIcon />
+                </ListItemIcon>
+                <ListItemText primary="Gestion des candidats" />
+                {open.candidats ? <ExpandLess /> : <ExpandMore />}
+              </ListItemButton>
+            </ListItem>
+            <Collapse in={open.candidats} timeout="auto" unmountOnExit>
+              <List component="div" disablePadding>
+                <ListItemButton 
+                  sx={{ pl: 4 }}
+                  onClick={() => onMenuItemClick('candidats')}
+                >
+                  <ListItemIcon>
+                    <WorkIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Liste des candidats" />
+                </ListItemButton>
+                <ListItemButton 
+                  sx={{ pl: 4 }}
+                  onClick={() => onMenuItemClick('entretiens')}
+                >
+                  <ListItemIcon>
+                    <AssignmentIcon />
+                  </ListItemIcon>
+                  <ListItemText primary="Liste des entretiens" />
+                </ListItemButton>
+              </List>
+            </Collapse>
+          </>
+        )}
+
+        {/* Gestion de Congés */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => handleClick('conges')}>
+            <ListItemIcon>
+              <CalendarIcon />
+            </ListItemIcon>
+            <ListItemText primary="Gestion de Congés" />
+            {open.conges ? <ExpandLess /> : <ExpandMore />}
+          </ListItemButton>
+        </ListItem>
+        <Collapse in={open.conges} timeout="auto" unmountOnExit>
+          <List component="div" disablePadding>
+            {(userRole === 'Admin' || userRole === 'RH') && (
+              <ListItemButton 
+                sx={{ pl: 4 }}
+                onClick={() => onMenuItemClick('conges')}
+              >
+                <ListItemIcon>
+                  <AssignmentIcon />
+                </ListItemIcon>
+                <ListItemText primary="Liste des congés" />
+              </ListItemButton>
             )}
-          </React.Fragment>
-        ))}
+            <ListItemButton 
+              sx={{ pl: 4 }}
+              onClick={() => onMenuItemClick('demandes')}
+            >
+              <ListItemIcon>
+                <AssignmentIcon />
+              </ListItemIcon>
+              <ListItemText primary="Demandes de congés" />
+            </ListItemButton>
+          </List>
+          
+        </Collapse>
+
+        {/* Jours Fériés - visible for all roles */}
+        <ListItem disablePadding>
+          <ListItemButton onClick={() => onMenuItemClick('joursFeries')}>
+            <ListItemIcon>
+              <EventIcon />
+            </ListItemIcon>
+            <ListItemText primary="Jours Fériés" />
+          </ListItemButton>
+        </ListItem>
+
       </List>
-    </div>
+    </Box>
   );
 
   return (
@@ -185,19 +185,40 @@ const Sidebar = ({
       component="nav"
       sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
     >
+      {/* Mobile drawer */}
       <Drawer
-        variant={isMobile ? "temporary" : "permanent"}
+        variant="temporary"
         open={mobileOpen}
         onClose={handleDrawerToggle}
-        ModalProps={{ keepMounted: true }}
+        ModalProps={{
+          keepMounted: true, // Better open performance on mobile.
+        }}
         sx={{
+          display: { xs: 'block', sm: 'none' },
           '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
             width: drawerWidth,
-            boxSizing: 'border-box',
-            borderRight: '1px solid rgba(0, 0, 0, 0.12)',
-            boxShadow: '2px 0 8px rgba(0,0,0,0.05)'
+            bgcolor: 'background.paper',
+            borderRight: '1px solid rgba(0, 0, 0, 0.12)'
           },
         }}
+      >
+        {drawer}
+      </Drawer>
+
+      {/* Desktop drawer */}
+      <Drawer
+        variant="permanent"
+        sx={{
+          display: { xs: 'none', sm: 'block' },
+          '& .MuiDrawer-paper': { 
+            boxSizing: 'border-box', 
+            width: drawerWidth,
+            bgcolor: 'background.paper',
+            borderRight: '1px solid rgba(0, 0, 0, 0.12)'
+          },
+        }}
+        open
       >
         {drawer}
       </Drawer>
@@ -205,4 +226,4 @@ const Sidebar = ({
   );
 };
 
-export default Sidebar; 
+export default Sidebar;

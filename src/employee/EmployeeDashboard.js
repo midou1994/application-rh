@@ -23,6 +23,7 @@ import {
   Timer as JoursRestantsIcon,
 } from '@mui/icons-material';
 import DemandeConge from '../components/DemandeConge';
+import JoursFeriesList from '../components/JoursFeriesList';
 
 const EmployeeDashboard = () => {
   const [user, setUser] = useState(null);
@@ -307,6 +308,9 @@ const EmployeeDashboard = () => {
           />
         </Grid>
       </Grid>
+
+      {/* Affichage de la liste des jours fériés */}
+      <JoursFeriesList />
     </Box>
   );
 };
