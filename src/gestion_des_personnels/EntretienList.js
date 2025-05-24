@@ -19,13 +19,15 @@ import {
   TextField,
   MenuItem,
   CircularProgress,
-  Alert
+  Alert,
+  Snackbar
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Visibility as VisibilityIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
@@ -40,12 +42,31 @@ const EntretienList = () => {
   const [selectedEntretien, setSelectedEntretien] = useState(null);
   const [openDialog, setOpenDialog] = useState(false);
   const [openFormDialog, setOpenFormDialog] = useState(false);
+  const [openEvaluationDialog, setOpenEvaluationDialog] = useState(false);
+  const [openFicheDialog, setOpenFicheDialog] = useState(false);
+  const [selectedFiche, setSelectedFiche] = useState(null);
   const [formData, setFormData] = useState({
     date: null,
     heure: '',
     type_entretien: 'Présentiel',
     notes: '',
     candidat: '',
+  });
+  const [evaluationData, setEvaluationData] = useState({
+    recruteur: '',
+    technique_evaluation: '',
+    communication_evaluation: '',
+    motivation_evaluation: '',
+    preparation_evaluation: '',
+    commantaire_recruteur: '',
+    note: '',
+    decision: 'Réserve',
+    candidat: ''
+  });
+  const [snackbar, setSnackbar] = useState({
+    open: false,
+    message: '',
+    severity: 'success'
   });
   const navigate = useNavigate();
 
@@ -113,9 +134,74 @@ const EntretienList = () => {
     setOpenFormDialog(true);
   };
 
+  const handleAddEvaluation = (entretien) => {
+    setEvaluationData({
+      recruteur: '',
+      technique_evaluation: '',
+      communication_evaluation: '',
+      motivation_evaluation: '',
+      preparation_evaluation: '',
+      commantaire_recruteur: '',
+      note: '',
+      decision: 'Réserve',
+      candidat: entretien.candidat._id
+    });
+    setOpenEvaluationDialog(true);
+  };
+
+  const handleViewFiche = async (entretien) => {
+    try {
+      console.log('Fetching fiche for entretien:', entretien);
+      
+      // First try to get the fiche by candidat ID
+      const response = await fetch(`http://localhost:5000/ficheentretient/getAllFicheEntretient`, {
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la récupération des fiches d\'entretien');
+      }
+      
+      const fiches = await response.json();
+      console.log('All fiches:', fiches);
+      
+      // Find the fiche that matches this entretien's candidat
+      const matchingFiche = fiches.find(fiche => fiche.candidat === entretien.candidat._id);
+      console.log('Matching fiche:', matchingFiche);
+      
+      if (!matchingFiche) {
+        setSnackbar({
+          open: true,
+          message: 'Aucune fiche d\'évaluation trouvée pour cet entretien',
+          severity: 'warning'
+        });
+        return;
+      }
+
+      setSelectedFiche(matchingFiche);
+      setOpenFicheDialog(true);
+    } catch (err) {
+      console.error('Error fetching fiche:', err);
+      setError(err.message);
+      setSnackbar({
+        open: true,
+        message: err.message,
+        severity: 'error'
+      });
+    }
+  };
+
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleEvaluationChange = (e) => {
+    const { name, value } = e.target;
+    setEvaluationData(prev => ({
       ...prev,
       [name]: value
     }));
@@ -155,6 +241,39 @@ const EntretienList = () => {
       fetchEntretiens();
     } catch (err) {
       setError(err.message);
+    }
+  };
+
+  const handleEvaluationSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:5000/ficheentretient/addFicheEntretient', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(evaluationData),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Erreur lors de l\'ajout de l\'évaluation');
+      }
+
+      setOpenEvaluationDialog(false);
+      setSnackbar({
+        open: true,
+        message: 'Évaluation ajoutée avec succès',
+        severity: 'success'
+      });
+    } catch (err) {
+      setError(err.message);
+      setSnackbar({
+        open: true,
+        message: err.message,
+        severity: 'error'
+      });
     }
   };
 
@@ -213,6 +332,12 @@ const EntretienList = () => {
                 <TableCell>
                   <IconButton onClick={() => handleViewDetails(entretien)}>
                     <VisibilityIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleAddEvaluation(entretien)}>
+                    <EditIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleViewFiche(entretien)}>
+                    <AssessmentIcon />
                   </IconButton>
                   <IconButton onClick={() => handleDelete(entretien._id)}>
                     <DeleteIcon />
@@ -322,6 +447,167 @@ const EntretienList = () => {
           <Button onClick={handleSubmit} variant="contained">Ajouter</Button>
         </DialogActions>
       </Dialog>
+
+      {/* Dialog pour l'évaluation */}
+      <Dialog open={openEvaluationDialog} onClose={() => setOpenEvaluationDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Évaluation de l'Entretien</DialogTitle>
+        <DialogContent>
+          <Box component="form" onSubmit={handleEvaluationSubmit} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              label="Recruteur"
+              name="recruteur"
+              value={evaluationData.recruteur}
+              onChange={handleEvaluationChange}
+              required
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Technique"
+              name="technique_evaluation"
+              value={evaluationData.technique_evaluation}
+              onChange={handleEvaluationChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Communication"
+              name="communication_evaluation"
+              value={evaluationData.communication_evaluation}
+              onChange={handleEvaluationChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Motivation"
+              name="motivation_evaluation"
+              value={evaluationData.motivation_evaluation}
+              onChange={handleEvaluationChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Évaluation Préparation"
+              name="preparation_evaluation"
+              value={evaluationData.preparation_evaluation}
+              onChange={handleEvaluationChange}
+              multiline
+              rows={2}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Note (sur 20)"
+              name="note"
+              type="number"
+              value={evaluationData.note}
+              onChange={handleEvaluationChange}
+              inputProps={{ min: 0, max: 20 }}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              select
+              label="Décision"
+              name="decision"
+              value={evaluationData.decision}
+              onChange={handleEvaluationChange}
+              required
+              sx={{ mb: 2 }}
+            >
+              <MenuItem value="Accepté">Accepté</MenuItem>
+              <MenuItem value="Rejeté">Rejeté</MenuItem>
+              <MenuItem value="Réserve">Réserve</MenuItem>
+            </TextField>
+            <TextField
+              fullWidth
+              label="Commentaires du Recruteur"
+              name="commantaire_recruteur"
+              value={evaluationData.commantaire_recruteur}
+              onChange={handleEvaluationChange}
+              multiline
+              rows={4}
+              sx={{ mb: 2 }}
+            />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenEvaluationDialog(false)}>Annuler</Button>
+          <Button onClick={handleEvaluationSubmit} variant="contained">Enregistrer</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Dialog pour la fiche d'entretien */}
+      <Dialog open={openFicheDialog} onClose={() => setOpenFicheDialog(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Fiche d'Évaluation</DialogTitle>
+        <DialogContent>
+          {selectedFiche && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>Informations Générales</Typography>
+              <Typography><strong>Recruteur:</strong> {selectedFiche.recruteur}</Typography>
+              <Typography><strong>Décision:</strong> {selectedFiche.decision}</Typography>
+              {selectedFiche.note && (
+                <Typography><strong>Note:</strong> {selectedFiche.note}/20</Typography>
+              )}
+
+              <Typography variant="h6" sx={{ mt: 3, mb: 2 }}>Évaluations</Typography>
+              {selectedFiche.technique_evaluation && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1"><strong>Évaluation Technique:</strong></Typography>
+                  <Typography>{selectedFiche.technique_evaluation}</Typography>
+                </Box>
+              )}
+              {selectedFiche.communication_evaluation && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1"><strong>Évaluation Communication:</strong></Typography>
+                  <Typography>{selectedFiche.communication_evaluation}</Typography>
+                </Box>
+              )}
+              {selectedFiche.motivation_evaluation && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1"><strong>Évaluation Motivation:</strong></Typography>
+                  <Typography>{selectedFiche.motivation_evaluation}</Typography>
+                </Box>
+              )}
+              {selectedFiche.preparation_evaluation && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1"><strong>Évaluation Préparation:</strong></Typography>
+                  <Typography>{selectedFiche.preparation_evaluation}</Typography>
+                </Box>
+              )}
+              {selectedFiche.commantaire_recruteur && (
+                <Box sx={{ mb: 2 }}>
+                  <Typography variant="subtitle1"><strong>Commentaires du Recruteur:</strong></Typography>
+                  <Typography>{selectedFiche.commantaire_recruteur}</Typography>
+                </Box>
+              )}
+            </Box>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setOpenFicheDialog(false)}>Fermer</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbar.open}
+        autoHideDuration={6000}
+        onClose={() => setSnackbar({ ...snackbar, open: false })}
+      >
+        <Alert 
+          onClose={() => setSnackbar({ ...snackbar, open: false })} 
+          severity={snackbar.severity}
+        >
+          {snackbar.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

@@ -84,8 +84,9 @@ const Personnel = () => {
       // Fetch user information for each employee
       const employeesWithUserData = await Promise.all(
         data.map(async (employee) => {
-          if (employee.user) {
-            try {
+          try {
+            // First try to get user data from the employee's user field
+            if (employee.user) {
               const userResponse = await fetch(`http://localhost:5000/users/getuserBYID/${employee.user}`, {
                 credentials: 'include'
               });
@@ -99,19 +100,63 @@ const Personnel = () => {
                   user: userData._id // Keep the user ID for updates
                 };
               }
-            } catch (err) {
-              console.error('Error fetching user data:', err);
             }
+
+            // If no user data found, try to find user by email
+            if (employee.email) {
+              const userByEmailResponse = await fetch(`http://localhost:5000/users/getUserByEmail/${employee.email}`, {
+                credentials: 'include'
+              });
+              if (userByEmailResponse.ok) {
+                const userData = await userByEmailResponse.json();
+                return {
+                  ...employee,
+                  email: userData.email,
+                  role: userData.role,
+                  isActive: userData.isActive,
+                  user: userData._id // Keep the user ID for updates
+                };
+              }
+            }
+
+            // If no user found at all, try to find user by name
+            const userByNameResponse = await fetch(`http://localhost:5000/users/getUserByName/${employee.nom}/${employee.prenom}`, {
+              credentials: 'include'
+            });
+            if (userByNameResponse.ok) {
+              const userData = await userByNameResponse.json();
+              return {
+                ...employee,
+                email: userData.email,
+                role: userData.role,
+                isActive: userData.isActive,
+                user: userData._id // Keep the user ID for updates
+              };
+            }
+
+            // If no user found at all, return employee with default values
+            console.warn('No user found for employee:', employee._id);
+            return {
+              ...employee,
+              isActive: false,
+              email: '',
+              role: 'Employe',
+              user: null
+            };
+          } catch (err) {
+            console.error('Error fetching user data for employee:', employee._id, err);
+            return {
+              ...employee,
+              isActive: false,
+              email: '',
+              role: 'Employe',
+              user: null
+            };
           }
-          return {
-            ...employee,
-            isActive: false,
-            email: '',
-            role: 'Employe'
-          };
         })
       );
 
+      console.log('Fetched employees with user data:', employeesWithUserData);
       setPersonnel(employeesWithUserData);
     } catch (err) {
       setError(err.message);
@@ -173,7 +218,30 @@ const Personnel = () => {
 
   const handleEdit = (row) => {
     console.log('Editing row:', row);
-    setSelectedPersonnel(row);
+    
+    // Check if we have all required data
+    if (!row._id) {
+      console.error('Missing employee ID:', row);
+      setSnackbar({
+        open: true,
+        message: 'Données incomplètes pour la modification',
+        severity: 'error'
+      });
+      return;
+    }
+
+    // If no user ID, try to find it
+    if (!row.user) {
+      console.warn('No user ID found, attempting to find user...');
+      // The user ID will be fetched in the next render cycle
+    }
+    
+    setSelectedPersonnel({
+      _id: row._id,
+      user: row.user,
+      ...row
+    });
+    
     setFormData({
       matricule: row.matricule,
       nom: row.nom,
@@ -187,6 +255,7 @@ const Personnel = () => {
       email: row.email || '',
       role: row.role || 'Employe',
       isActive: Boolean(row.isActive),
+      user: row.user
     });
     setPreviewUrl(row.photo ? `http://localhost:5000/images/${row.photo}` : '');
     setOpenDialog(true);
@@ -195,7 +264,7 @@ const Personnel = () => {
   const handleDelete = async (row) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cet employé ?')) {
       try {
-        const response = await fetch(`http://localhost:5000/employe/deleteEmploye/${row._id}`, {
+        const response = await fetch(`http://localhost:5000/employe/deletEmployesBYID/${row._id}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -231,92 +300,141 @@ const Personnel = () => {
         throw new Error('Le numéro de téléphone doit contenir exactement 8 chiffres');
       }
 
-      // First create/update user
-      const userData = {
-        nom: formData.nom,
-        prenom: formData.prenom,
-        email: formData.email,
-        role: formData.role,
-        isActive: Boolean(formData.isActive),
-      };
+      let userResult;
 
-      // Handle password for both new and existing users
-      if (!selectedPersonnel) {
+      // Check if we're in edit mode by checking selectedPersonnel
+      const isEditMode = Boolean(selectedPersonnel && selectedPersonnel._id);
+      console.log('Is edit mode:', isEditMode);
+      console.log('Selected personnel:', selectedPersonnel);
+
+      if (isEditMode) {
+        // UPDATE EXISTING USER
+        const userData = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          email: formData.email,
+          role: formData.role,
+          isActive: Boolean(formData.isActive),
+        };
+
+        if (formData.password) {
+          userData.password = formData.password;
+        }
+
+        console.log('Updating user with ID:', selectedPersonnel.user);
+        const userResponse = await fetch(`http://localhost:5000/users/updateUser/${selectedPersonnel.user}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(userData),
+        });
+
+        if (!userResponse.ok) {
+          const errorData = await userResponse.json();
+          throw new Error(errorData.message || 'Erreur lors de la modification de l\'utilisateur');
+        }
+        
+        userResult = await userResponse.json();
+        console.log('User update successful:', userResult);
+
+        // UPDATE EXISTING EMPLOYEE
+        const formDataToSend = new FormData();
+        formDataToSend.append('matricule', formData.matricule);
+        formDataToSend.append('nom', formData.nom);
+        formDataToSend.append('prenom', formData.prenom);
+        formDataToSend.append('cin', formData.cin);
+        formDataToSend.append('date_naissance', formData.date_naissance);
+        formDataToSend.append('adresse', formData.adresse);
+        formDataToSend.append('telephone', formData.telephone);
+        formDataToSend.append('post', formData.post);
+        formDataToSend.append('user', userResult._id);
+
+        if (formData.photo instanceof File) {
+          formDataToSend.append('photo', formData.photo);
+        }
+
+        console.log('Updating employee with ID:', selectedPersonnel._id);
+        const employeeResponse = await fetch(`http://localhost:5000/employe/updateEmployeWithImage/${selectedPersonnel._id}`, {
+          method: 'PUT',
+          credentials: 'include',
+          body: formDataToSend,
+        });
+
+        if (!employeeResponse.ok) {
+          const errorData = await employeeResponse.json();
+          throw new Error(errorData.message || 'Erreur lors de la modification de l\'employé');
+        }
+      } else {
+        // ADD NEW USER
+        const userData = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          email: formData.email,
+          role: formData.role,
+          isActive: Boolean(formData.isActive),
+          password: formData.password
+        };
+
         if (!formData.password) {
           throw new Error('Le mot de passe est requis pour un nouvel utilisateur');
         }
-        userData.password = formData.password;
-      } else if (formData.password) {
-        // Include password only if it's being changed for existing user
-        userData.password = formData.password;
-      }
 
-      console.log('Sending user data:', userData);
+        const userResponse = await fetch('http://localhost:5000/users/addEmploye', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify(userData),
+        });
 
-      const userUrl = selectedPersonnel?.user
-        ? `http://localhost:5000/users/updateUser/${selectedPersonnel.user}`
-        : 'http://localhost:5000/users/addEmploye';
+        if (!userResponse.ok) {
+          const errorData = await userResponse.json();
+          throw new Error(errorData.message || 'Erreur lors de la création de l\'utilisateur');
+        }
+        
+        userResult = await userResponse.json();
 
-      const userResponse = await fetch(userUrl, {
-        method: selectedPersonnel?.user ? 'PUT' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify(userData),
-      });
+        // ADD NEW EMPLOYEE
+        const formDataToSend = new FormData();
+        formDataToSend.append('matricule', formData.matricule);
+        formDataToSend.append('nom', formData.nom);
+        formDataToSend.append('prenom', formData.prenom);
+        formDataToSend.append('cin', formData.cin);
+        formDataToSend.append('date_naissance', formData.date_naissance);
+        formDataToSend.append('adresse', formData.adresse);
+        formDataToSend.append('telephone', formData.telephone);
+        formDataToSend.append('post', formData.post);
+        formDataToSend.append('user', userResult._id);
 
-      if (!userResponse.ok) {
-        const errorData = await userResponse.json();
-        throw new Error(errorData.message || 'Erreur lors de la création/modification de l\'utilisateur');
-      }
-      
-      const userResult = await userResponse.json();
-      console.log('User update response:', userResult);
+        if (formData.photo instanceof File) {
+          formDataToSend.append('photo', formData.photo);
+        }
 
-      // Then create/update employee with image
-      const formDataToSend = new FormData();
-      
-      // Add all employee fields
-      formDataToSend.append('matricule', formData.matricule);
-      formDataToSend.append('nom', formData.nom);
-      formDataToSend.append('prenom', formData.prenom);
-      formDataToSend.append('cin', formData.cin);
-      formDataToSend.append('date_naissance', formData.date_naissance);
-      formDataToSend.append('adresse', formData.adresse);
-      formDataToSend.append('telephone', formData.telephone);
-      formDataToSend.append('post', formData.post);
-      formDataToSend.append('user', userResult._id);
+        const employeeResponse = await fetch('http://localhost:5000/employe/addEmployeWithImage', {
+          method: 'POST',
+          credentials: 'include',
+          body: formDataToSend,
+        });
 
-      // Handle photo upload
-      if (formData.photo instanceof File) {
-        formDataToSend.append('photo', formData.photo);
-      }
-
-      const employeeUrl = selectedPersonnel
-        ? `http://localhost:5000/employe/updateEmployesBYID/${selectedPersonnel._id}`
-        : 'http://localhost:5000/employe/addEmployeWithImage';
-
-      const employeeResponse = await fetch(employeeUrl, {
-        method: selectedPersonnel ? 'PUT' : 'POST',
-        credentials: 'include',
-        body: formDataToSend,
-      });
-
-      if (!employeeResponse.ok) {
-        const errorData = await employeeResponse.json();
-        throw new Error(errorData.message || 'Erreur lors de la création/modification de l\'employé');
+        if (!employeeResponse.ok) {
+          const errorData = await employeeResponse.json();
+          throw new Error(errorData.message || 'Erreur lors de la création de l\'employé');
+        }
       }
       
       setSnackbar({
         open: true,
-        message: selectedPersonnel ? 'Employé modifié avec succès' : 'Employé ajouté avec succès',
+        message: isEditMode ? 'Employé modifié avec succès' : 'Employé ajouté avec succès',
         severity: 'success'
       });
       
       setOpenDialog(false);
       fetchPersonnel();
     } catch (err) {
+      console.error('Error in handleSubmit:', err);
       setSnackbar({
         open: true,
         message: err.message,
