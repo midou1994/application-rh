@@ -16,7 +16,6 @@ import {
   Paper,
   Avatar,
   useTheme,
-  Alert,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -29,15 +28,13 @@ import {
 import { ThemeProvider } from "@mui/material/styles";
 import Sidebar from './components/Sidebar';
 import Personnel from './components/Personnel';
-import Conges from './gestion_de_conge/Conges';
-import JoursFeries from './gestion_de_conge/JourFeries';
-import DemandeConge from './gestion_de_conge/demandeconge';
+import Conges from './components/Conges';
+import JoursFeries from './components/JoursFeries';
+import DemandeConge from './components/DemandeConge';
 import CandidatList from './gestion_des_personnels/CandidatList';
 import CandidatForm from './gestion_des_personnels/CandidatForm';
 import EntretienList from './gestion_des_personnels/EntretienList';
 import EntretienForm from './gestion_des_personnels/EntretienForm';
-import JoursFeriesList from './components/JoursFeriesList';
-import EmployeeList from './gestion_des_personnels/EmployeeList';
 
 const Dashboard = () => {
   // États
@@ -76,33 +73,45 @@ const Dashboard = () => {
 
   // Récupération des données utilisateur et employé
   useEffect(() => {
-    const fetchUserData = async () => {
+    const fetchUserAndEmployee = async () => {
+      const storedUser = JSON.parse(localStorage.getItem("loggedUser"));
+      if (!storedUser?._id) {
+        navigate("/login");
+        return;
+      }
+
       try {
-        const storedUser = JSON.parse(localStorage.getItem("loggedUser"));
-        if (!storedUser?._id) {
-          setLoading(false);
-          return;
-        }
+        const [userRes, employeeRes] = await Promise.all([
+          fetch(`http://localhost:5000/users/getuserBYID/${storedUser._id}`, { 
+            credentials: "include" 
+          }),
+          fetch(`http://localhost:5000/employe/byUser/${storedUser._id}`, {
+            credentials: "include"
+          })
+        ]);
+        
+        if (!userRes.ok) throw new Error("Non autorisé");
+        
+        const userData = await userRes.json();
+        setUser(userData);
+        setUserRole(userData.role);
 
-        const response = await fetch(`http://localhost:5000/users/getuserBYID/${storedUser._id}`, {
-          credentials: 'include'
-        });
-
-        if (response.ok) {
-          const userData = await response.json();
-          setUser(userData);
-          setUserRole(userData.role);
+        if (employeeRes.ok) {
+          const employeeData = await employeeRes.json();
+          // Construct the full photo URL
+          if (employeeData.photo) {
+            employeeData.photo = `http://localhost:5000/images/${employeeData.photo}`;
+          }
+          setEmployee(employeeData);
         }
       } catch (err) {
-        console.error('Error fetching user data:', err);
-        setError(err.message);
-      } finally {
-        setLoading(false);
+        localStorage.removeItem("loggedUser");
+        navigate("/login");
       }
     };
 
-    fetchUserData();
-  }, []);
+    fetchUserAndEmployee();
+  }, [navigate]);
 
   // Récupération des statistiques
   useEffect(() => {
@@ -304,7 +313,7 @@ const Dashboard = () => {
         return (
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <EmployeeList />
+              <Personnel />
             </Box>
           </Box>
         );
@@ -336,7 +345,7 @@ const Dashboard = () => {
         return (
           <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
             <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <JoursFeriesList />
+              <JoursFeries />
             </Box>
           </Box>
         );
@@ -355,7 +364,7 @@ const Dashboard = () => {
 
   return (
     <ThemeProvider theme={theme}>
-      <Box sx={{ display: "flex", minHeight: '100vh' }}>
+      <Box sx={{ display: "flex" }}>
         <CssBaseline />
         
         {/* En-tête */}
@@ -422,17 +431,26 @@ const Dashboard = () => {
         <Box
           component="main"
           sx={{
-            flexGrow: 1,
-            p: 3,
-            width: { sm: `calc(100% - ${drawerWidth}px)` },
-            mt: '64px',
-            backgroundColor: '#f5f5f5',
-            minHeight: 'calc(100vh - 64px)'
-          }}
+  flexGrow: 1,
+  p: 3,
+  width: '100%',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  minHeight: '100vh',
+  boxSizing: 'border-box'
+}}
+
         >
           <Toolbar />
 
-          <Box sx={{ width: '100%' }}>
+          <Box sx={{ 
+            width: '100%',
+            maxWidth: '1200px',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 3
+          }}>
             {user && (
               <Box sx={{ 
                 display: 'flex', 
