@@ -23,6 +23,7 @@ import {
   Timer as JoursRestantsIcon,
 } from '@mui/icons-material';
 import DemandeConge from '../components/DemandeConge';
+import { useNavigate } from 'react-router-dom';
 
 const EmployeeDashboard = () => {
   const [user, setUser] = useState(null);
@@ -38,6 +39,7 @@ const EmployeeDashboard = () => {
   const [activeConges, setActiveConges] = useState([]);
   const [remainingDays, setRemainingDays] = useState(0);
   const theme = useTheme();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUserAndEmployee = async () => {
@@ -254,8 +256,14 @@ const EmployeeDashboard = () => {
               width: 80, 
               height: 80,
               border: '2px solid #2196F3',
-              boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s',
+              '&:hover': {
+                transform: 'scale(1.05)'
+              }
             }}
+            onClick={() => navigate('/employee/profile')}
           />
         )}
         <Box>

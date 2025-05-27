@@ -13,10 +13,14 @@ import EmployeeLayout from './employee/EmployeeLayout';
 import EmployeeDashboard from './employee/EmployeeDashboard';
 import EmployeeDemandes from './employee/EmployeeDemandes';
 import EmployeeConges from './employee/EmployeeConges';
+import EmployeeJoursFeries from './employee/JoursFeries';
+import EditProfile from './employee/EditProfile';
 import CandidatList from './gestion_des_personnels/CandidatList';
 import CandidatForm from './gestion_des_personnels/CandidatForm';
 import EntretienList from './gestion_des_personnels/EntretienList';
 import EntretienForm from './gestion_des_personnels/EntretienForm';
+import EmployeeCarriere from './employee/EmployeeCarriere';
+import CarriereList from './gestion_de_carriere/CarriereList';
 
 // Protected Route component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -78,86 +82,21 @@ function App() {
             <Dashboard />
           </ProtectedRoute>
         } />
-        <Route path="/conges" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <Conges />
-          </ProtectedRoute>
-        } />
-        <Route path="/jours-feries" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <JourFeries />
-          </ProtectedRoute>
-        } />
-        <Route path="/demandes-conge" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <DemandesConge />
-          </ProtectedRoute>
-        } />
-        <Route path="/employes" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <EmployeeList />
-          </ProtectedRoute>
-        } />
-        <Route path="/employes/add" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <EmployeeForm />
-          </ProtectedRoute>
-        } />
-        <Route path="/employes/edit/:id" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <EmployeeForm />
-          </ProtectedRoute>
-        } />
-
-        {/* Candidate Management Routes */}
-        <Route path="/candidats" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <CandidatList />
-          </ProtectedRoute>
-        } />
-        <Route path="/candidats/add" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <CandidatForm />
-          </ProtectedRoute>
-        } />
-        <Route path="/candidats/edit/:id" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <CandidatForm />
-          </ProtectedRoute>
-        } />
-        <Route path="/entretiens" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <EntretienList />
-          </ProtectedRoute>
-        } />
-        <Route path="/entretiens/add/:candidatId" element={
-          <ProtectedRoute allowedRoles={['Admin', 'RH']}>
-            <EntretienForm />
-          </ProtectedRoute>
-        } />
 
         {/* Employee Routes */}
         <Route path="/employee" element={
           <ProtectedRoute allowedRoles={['Employe']}>
-            <EmployeeLayout>
-              <EmployeeDashboard />
-            </EmployeeLayout>
+            <EmployeeLayout />
           </ProtectedRoute>
-        } />
-        <Route path="/employee/demandes" element={
-          <ProtectedRoute allowedRoles={['Employe']}>
-            <EmployeeLayout>
-              <EmployeeDemandes />
-            </EmployeeLayout>
-          </ProtectedRoute>
-        } />
-        <Route path="/employee/conges" element={
-          <ProtectedRoute allowedRoles={['Employe']}>
-            <EmployeeLayout>
-              <EmployeeConges />
-            </EmployeeLayout>
-          </ProtectedRoute>
-        } />
+        }>
+          <Route index element={<EmployeeDashboard />} />
+          <Route path="dashboard" element={<EmployeeDashboard />} />
+          <Route path="profile" element={<EditProfile />} />
+          <Route path="demandes" element={<EmployeeDemandes />} />
+          <Route path="conges" element={<EmployeeConges />} />
+          <Route path="jours-feries" element={<EmployeeJoursFeries />} />
+          <Route path="carriere" element={<EmployeeCarriere />} />
+        </Route>
       </Routes>
     </Router>
   );

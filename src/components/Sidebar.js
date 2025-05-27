@@ -20,6 +20,9 @@ import {
   ExpandMore,
   PersonAdd as PersonAddIcon,
   GroupAdd as GroupAddIcon,
+  Work as WorkIcon,
+  School as SchoolIcon,
+  Timeline as TimelineIcon,
 } from '@mui/icons-material';
 
 const Sidebar = ({ 
@@ -30,45 +33,79 @@ const Sidebar = ({
   onMenuItemClick,
   userRole 
 }) => {
-  const [openConges, setOpenConges] = useState(false);
+  const [openGroups, setOpenGroups] = useState({
+    personnel: false,
+    conges: false,
+    carriere: false
+  });
 
-  const handleCongesClick = () => {
-    setOpenConges(!openConges);
+  const handleGroupClick = (group) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }));
   };
 
-  const menuItems = [
-    { 
-      text: "Tableau de bord", 
-      icon: <DashboardIcon />,
-      component: "dashboard"
-    },
-    userRole === "Admin" && { 
-      text: "Gestion des personnels", 
-      icon: <PeopleIcon />,
-      component: "employees"
-    },
-    userRole === "Admin" && { 
-      text: "Gestion des candidats", 
-      icon: <PersonAddIcon />,
-      component: "candidats",
-      subItems: [
+  const menuGroups = [
+    {
+      id: 'dashboard',
+      items: [
         { 
-          text: "Liste des candidats", 
+          text: "Tableau de bord", 
+          icon: <DashboardIcon />,
+          component: "dashboard"
+        }
+      ]
+    },
+    {
+      id: 'personnel',
+      title: "Gestion du Personnel",
+      icon: <PeopleIcon />,
+      items: [
+        userRole === "Admin" && { 
+          text: "Liste des employés", 
+          icon: <PeopleIcon />,
+          component: "employees"
+        },
+        userRole === "Admin" && { 
+          text: "Gestion des candidats", 
           icon: <PersonAddIcon />,
           component: "candidats"
         },
-        { 
+        userRole === "Admin" && { 
           text: "Entretiens", 
           icon: <GroupAddIcon />,
           component: "entretiens"
         }
+      ].filter(Boolean)
+    },
+    {
+      id: 'carriere',
+      title: "Gestion de Carrière",
+      icon: <WorkIcon />,
+      items: [
+        { 
+          text: "Plan de carrière", 
+          icon: <TimelineIcon />,
+          component: "carriere"
+        },
+        { 
+          text: "Compétences", 
+          icon: <SchoolIcon />,
+          component: "competences"
+        },
+        { 
+          text: "Formations", 
+          icon: <SchoolIcon />,
+          component: "formations"
+        }
       ]
     },
-    { 
-      text: "Gestion de Congés", 
+    {
+      id: 'conges',
+      title: "Gestion des Congés",
       icon: <CongesIcon />,
-      component: "conges",
-      subItems: [
+      items: [
         userRole === "Admin" && { 
           text: "Liste des congés", 
           icon: <CongesIcon />,
@@ -85,13 +122,8 @@ const Sidebar = ({
           component: "demandes"
         }
       ].filter(Boolean)
-    },
-    userRole === "Employe" && {
-      text: "Mes congés",
-      icon: <CongesIcon />,
-      component: "employeeConges"
     }
-  ].filter(Boolean);
+  ];
 
   const drawer = (
     <div>
@@ -111,68 +143,100 @@ const Sidebar = ({
       </Toolbar>
       <Divider />
       <List>
-        {menuItems.map((item, index) => (
-          <React.Fragment key={index}>
-            <ListItem 
-              button 
-              onClick={item.subItems ? handleCongesClick : () => onMenuItemClick(item.component)}
-              sx={{
-                '&:hover': {
-                  backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                  '& .MuiListItemIcon-root': {
-                    color: '#2196F3'
-                  },
-                  '& .MuiListItemText-primary': {
-                    color: '#2196F3'
-                  }
-                }
-              }}
-            >
-              <ListItemIcon sx={{ color: 'text.secondary' }}>
-                {item.icon}
-              </ListItemIcon>
-              <ListItemText 
-                primary={item.text} 
-                primaryTypographyProps={{
-                  sx: { fontWeight: 500 }
-                }}
-              />
-              {item.subItems && (openConges ? <ExpandLess /> : <ExpandMore />)}
-            </ListItem>
-            {item.subItems && (
-              <Collapse in={openConges} timeout="auto" unmountOnExit>
-                <List component="div" disablePadding>
-                  {item.subItems.map((subItem, subIndex) => (
-                    <ListItem 
-                      button 
-                      key={subIndex}
-                      onClick={() => onMenuItemClick(subItem.component)}
-                      sx={{
-                        pl: 4,
-                        '&:hover': {
-                          backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                          '& .MuiListItemIcon-root': {
-                            color: '#2196F3'
-                          },
-                          '& .MuiListItemText-primary': {
-                            color: '#2196F3'
+        {menuGroups.map((group) => (
+          <React.Fragment key={group.id}>
+            {group.title ? (
+              <>
+                <ListItem 
+                  button 
+                  onClick={() => handleGroupClick(group.id)}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      '& .MuiListItemIcon-root': {
+                        color: '#2196F3'
+                      },
+                      '& .MuiListItemText-primary': {
+                        color: '#2196F3'
+                      }
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'text.secondary' }}>
+                    {group.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={group.title} 
+                    primaryTypographyProps={{
+                      sx: { fontWeight: 500 }
+                    }}
+                  />
+                  {openGroups[group.id] ? <ExpandLess /> : <ExpandMore />}
+                </ListItem>
+                <Collapse in={openGroups[group.id]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {group.items.map((item, index) => (
+                      <ListItem 
+                        button 
+                        key={index}
+                        onClick={() => onMenuItemClick(item.component)}
+                        sx={{
+                          pl: 4,
+                          '&:hover': {
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            '& .MuiListItemIcon-root': {
+                              color: '#2196F3'
+                            },
+                            '& .MuiListItemText-primary': {
+                              color: '#2196F3'
+                            }
                           }
-                        }
-                      }}
-                    >
-                      <ListItemIcon sx={{ color: 'text.secondary' }}>
-                        {subItem.icon}
-                      </ListItemIcon>
-                      <ListItemText 
-                        primary={subItem.text} 
-                        primaryTypographyProps={{
-                          sx: { fontWeight: 500 }
                         }}
-                      />
-                    </ListItem>
-                  ))}
-                </List>
-              </Collapse>
+                      >
+                        <ListItemIcon sx={{ color: 'text.secondary' }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.text} 
+                          primaryTypographyProps={{
+                            sx: { fontWeight: 500 }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            ) : (
+              // Non-collapsible items (like Dashboard)
+              group.items.map((item, index) => (
+                <ListItem 
+                  button 
+                  key={index}
+                  onClick={() => onMenuItemClick(item.component)}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      '& .MuiListItemIcon-root': {
+                        color: '#2196F3'
+                      },
+                      '& .MuiListItemText-primary': {
+                        color: '#2196F3'
+                      }
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'text.secondary' }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={{
+                      sx: { fontWeight: 500 }
+                    }}
+                  />
+                </ListItem>
+              ))
             )}
           </React.Fragment>
         ))}

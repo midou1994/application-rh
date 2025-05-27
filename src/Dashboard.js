@@ -16,6 +16,12 @@ import {
   Paper,
   Avatar,
   useTheme,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Collapse,
 } from "@mui/material";
 import {
   People as PeopleIcon,
@@ -24,9 +30,13 @@ import {
   Event as EventsIcon,
   Menu as MenuIcon,
   Logout as LogoutIcon,
+  Dashboard as DashboardIcon,
+  Work as WorkIcon,
+  ExpandLess,
+  ExpandMore,
+  PersonAdd as PersonAddIcon,
 } from "@mui/icons-material";
 import { ThemeProvider } from "@mui/material/styles";
-import Sidebar from './components/Sidebar';
 import Personnel from './components/Personnel';
 import Conges from './components/Conges';
 import JoursFeries from './components/JoursFeries';
@@ -35,6 +45,7 @@ import CandidatList from './gestion_des_personnels/CandidatList';
 import CandidatForm from './gestion_des_personnels/CandidatForm';
 import EntretienList from './gestion_des_personnels/EntretienList';
 import EntretienForm from './gestion_des_personnels/EntretienForm';
+import CarriereList from './gestion_de_carriere/CarriereList';
 
 const Dashboard = () => {
   // États
@@ -219,52 +230,196 @@ const Dashboard = () => {
     </Card>
   );
 
+  const menuGroups = [
+    {
+      id: 'dashboard',
+      items: [
+        { text: "Tableau de bord", icon: <DashboardIcon />, component: "dashboard" }
+      ]
+    },
+    {
+      id: 'personnel',
+      title: "Gestion du Personnel",
+      icon: <PeopleIcon />,
+      items: [
+        { text: "Liste des employés", icon: <PeopleIcon />, component: "employees" }
+      ]
+    },
+    {
+      id: 'recrutement',
+      title: "Gestion de Recrutement",
+      icon: <PersonAddIcon />,
+      items: [
+        { text: "Candidats", icon: <PeopleIcon />, component: "candidats" },
+        { text: "Entretiens", icon: <DemandesIcon />, component: "entretiens" }
+      ]
+    },
+    {
+      id: 'carriere',
+      title: "Gestion de Carrière",
+      icon: <WorkIcon />,
+      items: [
+        { text: "Plan de carrière", icon: <WorkIcon />, component: "carriere" }
+      ]
+    },
+    {
+      id: 'conges',
+      title: "Gestion des Congés",
+      icon: <CongesIcon />,
+      items: [
+        { text: "Liste des congés", icon: <CongesIcon />, component: "conges" },
+        { text: "Jours fériés", icon: <EventsIcon />, component: "joursFeries" },
+        { text: "Demandes de congés", icon: <DemandesIcon />, component: "demandes" }
+      ]
+    }
+  ];
+
+  const [openGroups, setOpenGroups] = useState({
+    personnel: false,
+    recrutement: false,
+    carriere: false,
+    conges: false
+  });
+
+  const handleGroupClick = (group) => {
+    setOpenGroups(prev => ({
+      ...prev,
+      [group]: !prev[group]
+    }));
+  };
+
+  const drawer = (
+    <div>
+      <Toolbar sx={{ 
+        background: 'linear-gradient(45deg, #2196F3 30%, #21CBF3 90%)',
+        color: 'white'
+      }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: 1,
+          fontWeight: 'bold',
+          fontSize: '1.2rem'
+        }}>
+          <DashboardIcon /> RH System
+        </Box>
+      </Toolbar>
+      <List>
+        {menuGroups.map((group) => (
+          <React.Fragment key={group.id}>
+            {group.title ? (
+              <>
+                <ListItem 
+                  button 
+                  onClick={() => handleGroupClick(group.id)}
+                  sx={{
+                    '&:hover': {
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      '& .MuiListItemIcon-root': {
+                        color: '#2196F3'
+                      },
+                      '& .MuiListItemText-primary': {
+                        color: '#2196F3'
+                      }
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ color: 'text.secondary' }}>
+                    {group.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={group.title} 
+                    primaryTypographyProps={{
+                      sx: { fontWeight: 500 }
+                    }}
+                  />
+                  {openGroups[group.id] ? <ExpandLess /> : <ExpandMore />}
+                </ListItem>
+                <Collapse in={openGroups[group.id]} timeout="auto" unmountOnExit>
+                  <List component="div" disablePadding>
+                    {group.items.map((item) => (
+                      <ListItem 
+                        button 
+                        key={item.text}
+                        onClick={() => handleMenuItemClick(item.component)}
+                        sx={{
+                          pl: 4,
+                          backgroundColor: activeComponent === item.component ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+                          '&:hover': {
+                            backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                            '& .MuiListItemIcon-root': {
+                              color: '#2196F3'
+                            },
+                            '& .MuiListItemText-primary': {
+                              color: '#2196F3'
+                            }
+                          }
+                        }}
+                      >
+                        <ListItemIcon sx={{ 
+                          color: activeComponent === item.component ? '#2196F3' : 'text.secondary' 
+                        }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText 
+                          primary={item.text} 
+                          primaryTypographyProps={{
+                            sx: { 
+                              fontWeight: activeComponent === item.component ? 600 : 500,
+                              color: activeComponent === item.component ? '#2196F3' : 'inherit'
+                            }
+                          }}
+                        />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Collapse>
+              </>
+            ) : (
+              // Non-collapsible items (like Dashboard)
+              group.items.map((item) => (
+                <ListItem 
+                  button 
+                  key={item.text}
+                  onClick={() => handleMenuItemClick(item.component)}
+                  sx={{
+                    backgroundColor: activeComponent === item.component ? 'rgba(33, 150, 243, 0.1)' : 'transparent',
+                    '&:hover': {
+                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                      '& .MuiListItemIcon-root': {
+                        color: '#2196F3'
+                      },
+                      '& .MuiListItemText-primary': {
+                        color: '#2196F3'
+                      }
+                    }
+                  }}
+                >
+                  <ListItemIcon sx={{ 
+                    color: activeComponent === item.component ? '#2196F3' : 'text.secondary' 
+                  }}>
+                    {item.icon}
+                  </ListItemIcon>
+                  <ListItemText 
+                    primary={item.text} 
+                    primaryTypographyProps={{
+                      sx: { 
+                        fontWeight: activeComponent === item.component ? 600 : 500,
+                        color: activeComponent === item.component ? '#2196F3' : 'inherit'
+                      }
+                    }}
+                  />
+                </ListItem>
+              ))
+            )}
+          </React.Fragment>
+        ))}
+      </List>
+    </div>
+  );
+
   // Component content based on active component
   const renderComponentContent = () => {
-    // For employees, only show their own data
-    if (user?.role === "Employe") {
-      switch (activeComponent) {
-        case "dashboard":
-          return (
-            <Box sx={{ 
-              width: '100%',
-              display: 'flex',
-              justifyContent: 'center'
-            }}>
-              <Grid container spacing={3} sx={{ maxWidth: '1200px' }}>
-                <Grid item xs={12} sm={6}>
-                  <StatCard
-                    title="Mes demandes"
-                    value={stats.demandes}
-                    icon={DemandesIcon}
-                    color="linear-gradient(45deg, #FF4081 30%, #FF80AB 90%)"
-                  />
-                </Grid>
-                <Grid item xs={12} sm={6}>
-                  <StatCard
-                    title="Mes congés actifs"
-                    value={stats.congesActifs}
-                    icon={CongesIcon}
-                    color="linear-gradient(45deg, #4CAF50 30%, #81C784 90%)"
-                  />
-                </Grid>
-              </Grid>
-            </Box>
-          );
-        case "demandes":
-          return (
-            <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-              <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-                <DemandeConge employeeId={employee?._id} />
-              </Box>
-            </Box>
-          );
-        default:
-          return null;
-      }
-    }
-
-    // For Admin and RH, show all components
     switch (activeComponent) {
       case "dashboard":
         return (
@@ -310,53 +465,19 @@ const Dashboard = () => {
           </Box>
         );
       case "employees":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <Personnel />
-            </Box>
-          </Box>
-        );
-      case "candidats":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <CandidatList />
-            </Box>
-          </Box>
-        );
-      case "entretiens":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <EntretienList />
-            </Box>
-          </Box>
-        );
+        return <Personnel />;
       case "conges":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <Conges />
-            </Box>
-          </Box>
-        );
+        return <Conges />;
       case "joursFeries":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <JoursFeries />
-            </Box>
-          </Box>
-        );
+        return <JoursFeries />;
       case "demandes":
-        return (
-          <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
-            <Box sx={{ maxWidth: '1200px', width: '100%' }}>
-              <DemandeConge />
-            </Box>
-          </Box>
-        );
+        return <DemandeConge />;
+      case "carriere":
+        return <CarriereList />;
+      case "candidats":
+        return <CandidatList />;
+      case "entretiens":
+        return <EntretienList />;
       default:
         return null;
     }
@@ -418,106 +539,41 @@ const Dashboard = () => {
         </AppBar>
 
         {/* Sidebar */}
-        <Sidebar
-          mobileOpen={mobileOpen}
-          handleDrawerToggle={handleDrawerToggle}
-          drawerWidth={drawerWidth}
-          isMobile={isMobile}
-          onMenuItemClick={handleMenuItemClick}
-          userRole={userRole}
-        />
+        <Box
+          component="nav"
+          sx={{ width: { sm: drawerWidth }, flexShrink: { sm: 0 } }}
+        >
+          <Drawer
+            variant={isMobile ? "temporary" : "permanent"}
+            open={mobileOpen}
+            onClose={handleDrawerToggle}
+            ModalProps={{ keepMounted: true }}
+            sx={{
+              '& .MuiDrawer-paper': { 
+                width: drawerWidth,
+                boxSizing: 'border-box',
+                borderRight: '1px solid rgba(0, 0, 0, 0.12)',
+                boxShadow: '2px 0 8px rgba(0,0,0,0.05)'
+              },
+            }}
+          >
+            {drawer}
+          </Drawer>
+        </Box>
 
         {/* Contenu principal */}
         <Box
           component="main"
           sx={{
-  flexGrow: 1,
-  p: 3,
-  width: '100%',
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  minHeight: '100vh',
-  boxSizing: 'border-box'
-}}
-
+            flexGrow: 1,
+            p: 3,
+            width: { sm: `calc(100% - ${drawerWidth}px)` },
+            minHeight: '100vh',
+            bgcolor: 'background.default'
+          }}
         >
           <Toolbar />
-
-          <Box sx={{ 
-            width: '100%',
-            maxWidth: '1200px',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 3
-          }}>
-            {user && (
-              <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 2,
-                flexWrap: 'wrap',
-                mb: 2
-              }}>
-                {employee?.photo && (
-                  <Avatar
-                    src={employee.photo}
-                    alt={`${employee.prenom} ${employee.nom}`}
-                    sx={{ 
-                      width: 80, 
-                      height: 80,
-                      border: '2px solid #2196F3',
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-                    }}
-                  />
-                )}
-                <Box>
-                  <Typography variant="h4" gutterBottom>
-                    Bonjour, {employee?.prenom || user.prenom} {employee?.nom || user.nom}
-                  </Typography>
-                  <Typography variant="subtitle1" sx={{ color: "text.secondary" }}>
-                    Rôle : {user.role}
-                  </Typography>
-                  {employee && (
-                    <Typography variant="subtitle2" sx={{ color: "text.secondary" }}>
-                      Poste : {employee.post}
-                    </Typography>
-                  )}
-                </Box>
-              </Box>
-            )}
-
-            {loading ? (
-              <Box sx={{ 
-                display: "flex", 
-                justifyContent: "center", 
-                alignItems: "center", 
-                height: "50vh"
-              }}>
-                <CircularProgress size={80} />
-              </Box>
-            ) : error ? (
-              <Box sx={{ 
-                textAlign: "center", 
-                p: 4, 
-                bgcolor: "error.light", 
-                borderRadius: 2
-              }}>
-                <Typography variant="h6" color="error" gutterBottom>
-                  Erreur : {error}
-                </Typography>
-                <Button
-                  variant="contained"
-                  color="primary"
-                  onClick={() => window.location.reload()}
-                >
-                  Réessayer
-                </Button>
-              </Box>
-            ) : (
-              renderComponentContent()
-            )}
-          </Box>
+          {renderComponentContent()}
         </Box>
       </Box>
     </ThemeProvider>

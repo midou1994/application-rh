@@ -20,10 +20,13 @@ import {
   Logout as LogoutIcon,
   Dashboard as DashboardIcon,
   Assignment as DemandesIcon,
+  Event as JoursFeriesIcon,
+  Person as PersonIcon,
+  Work as WorkIcon,
 } from '@mui/icons-material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Outlet } from 'react-router-dom';
 
-const EmployeeLayout = ({ children }) => {
+const EmployeeLayout = () => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
@@ -47,9 +50,12 @@ const EmployeeLayout = ({ children }) => {
   };
 
   const menuItems = [
-    { text: "Tableau de bord", icon: <DashboardIcon />, path: "/employee" },
+    { text: "Tableau de bord", icon: <DashboardIcon />, path: "/employee/dashboard" },
+    { text: "Mon Profil", icon: <PersonIcon />, path: "/employee/profile" },
     { text: "Mes demandes", icon: <DemandesIcon />, path: "/employee/demandes" },
     { text: "Congés", icon: <DemandesIcon />, path: "/employee/conges" },
+    { text: "Jours fériés", icon: <JoursFeriesIcon />, path: "/employee/jours-feries" },
+    { text: "Carrière", icon: <WorkIcon />, path: "/employee/carriere" },
   ];
 
   const drawer = (
@@ -174,7 +180,7 @@ const EmployeeLayout = ({ children }) => {
         }}
       >
         <Toolbar />
-        {children}
+        <Outlet />
       </Box>
     </Box>
   );
