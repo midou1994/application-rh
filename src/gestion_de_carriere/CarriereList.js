@@ -360,8 +360,15 @@ const CarriereList = () => {
         date: '',
         raison: ''
       });
+    } else if (type === 'competence') {
+      // Initialize competence data structure
+      setSectionData({
+        nom: '',
+        niveau: '',
+        dateAcquisition: ''
+      });
     } else {
-      setSectionData(data);
+      setSectionData(data || {});
     }
     setOpenSectionDialog(true);
   };
@@ -382,7 +389,16 @@ const CarriereList = () => {
       switch (sectionType) {
         case 'competence':
           url += '/competences';
-          data = { competences: sectionData };
+          // Validate competence data before sending
+          if (!sectionData.nom || !sectionData.niveau || !sectionData.dateAcquisition) {
+            throw new Error('Tous les champs sont obligatoires pour la compétence');
+          }
+          // Format competence data according to the backend's expected format
+          data = {
+            nom: sectionData.nom,
+            niveau: sectionData.niveau,
+            dateAcquisition: new Date(sectionData.dateAcquisition).toISOString()
+          };
           break;
         case 'formation':
           url += '/formations';
@@ -394,7 +410,14 @@ const CarriereList = () => {
           if (!sectionData.type || !sectionData.ancienPoste || !sectionData.nouveauPoste || !sectionData.date || !sectionData.raison) {
             throw new Error('Tous les champs sont obligatoires pour la mobilité');
           }
-          data = { mobilite: sectionData };
+          // Format mobilite data according to the backend's expected format
+          data = {
+            type: sectionData.type,
+            ancienPoste: sectionData.ancienPoste,
+            nouveauPoste: sectionData.nouveauPoste,
+            date: new Date(sectionData.date).toISOString(),
+            raison: sectionData.raison
+          };
           break;
         case 'objectif':
           url += '/objectifs';
@@ -403,6 +426,8 @@ const CarriereList = () => {
         default:
           throw new Error('Type de section non valide');
       }
+
+      console.log('Sending data:', data); // Debug log
 
       const response = await fetch(url, {
         method: 'POST',
@@ -422,6 +447,7 @@ const CarriereList = () => {
       handleCloseSectionDialog();
       fetchCarrieres();
     } catch (err) {
+      console.error('Error submitting section:', err);
       setError(err.message);
     }
   };

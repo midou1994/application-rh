@@ -100,74 +100,103 @@ const CandidatForm = ({ candidat, onSuccess, onCancel }) => {
     setError(null);
 
     try {
-      const formDataToSend = new FormData();
-      
-      // Vérification et ajout des champs requis
-      const requiredFields = {
-        nom: formData.nom,
-        prenom: formData.prenom,
-        email: formData.email,
-        cin: formData.cin,
-        telephone: formData.telephone,
-        adresse: formData.adresse,
-        post: formData.post,
-        niveau_etude: formData.niveau_etude,
-        experience: formData.experience
-      };
+      if (candidat) {
+        // Update mode - use JSON
+        const updateData = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          email: formData.email,
+          cin: formData.cin,
+          telephone: formData.telephone,
+          adresse: formData.adresse,
+          post: formData.post,
+          niveau_etude: formData.niveau_etude,
+          experience: formData.experience,
+          annee_obtention: formData.annee_obtention || '',
+          date_naissance: formData.date_naissance.toISOString(),
+          cv: candidat.cv,
+          lettre_motivation: candidat.lettre_motivation,
+          diplome: candidat.diplome
+        };
 
-      // Vérification que tous les champs requis sont présents
-      for (const [key, value] of Object.entries(requiredFields)) {
-        if (!value) {
-          throw new Error(`Le champ ${key} est requis`);
+        // If new files are provided, update them
+        if (formData.cv instanceof File) {
+          updateData.cv = formData.cv;
         }
-        formDataToSend.append(key, value);
+        if (formData.lettre_motivation instanceof File) {
+          updateData.lettre_motivation = formData.lettre_motivation;
+        }
+        if (formData.diplome instanceof File) {
+          updateData.diplome = formData.diplome;
+        }
+
+        console.log('Sending update data:', updateData);
+
+        const response = await fetch(`http://localhost:5000/candidat/updateCandidatsBYID/${candidat._id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+        console.log('Update response:', data);
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Erreur lors de la mise à jour');
+        }
+
+        onSuccess();
+      } else {
+        // Create mode - use FormData
+        const formDataToSend = new FormData();
+        
+        // Add all basic fields
+        const basicFields = {
+          nom: formData.nom,
+          prenom: formData.prenom,
+          email: formData.email,
+          cin: formData.cin,
+          telephone: formData.telephone,
+          adresse: formData.adresse,
+          post: formData.post,
+          niveau_etude: formData.niveau_etude,
+          experience: formData.experience,
+          annee_obtention: formData.annee_obtention || ''
+        };
+
+        Object.entries(basicFields).forEach(([key, value]) => {
+          formDataToSend.append(key, value);
+        });
+
+        formDataToSend.append('date_naissance', formData.date_naissance.toISOString());
+
+        if (formData.cv instanceof File) {
+          formDataToSend.append('cv', formData.cv);
+        }
+        if (formData.lettre_motivation instanceof File) {
+          formDataToSend.append('lettre_motivation', formData.lettre_motivation);
+        }
+        if (formData.diplome instanceof File) {
+          formDataToSend.append('diplome', formData.diplome);
+        }
+
+        const response = await fetch('http://localhost:5000/candidat/addCandidats', {
+          method: 'POST',
+          body: formDataToSend,
+          credentials: 'include'
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || 'Erreur lors de l\'enregistrement');
+        }
+
+        onSuccess();
       }
-
-      // Ajout de la date de naissance
-      if (!formData.date_naissance) {
-        throw new Error('La date de naissance est requise');
-      }
-      formDataToSend.append('date_naissance', formData.date_naissance.toISOString());
-
-      // Ajout des fichiers optionnels
-      if (formData.cv) {
-        formDataToSend.append('cv', formData.cv);
-      }
-      if (formData.lettre_motivation) {
-        formDataToSend.append('lettre_motivation', formData.lettre_motivation);
-      }
-      if (formData.diplome) {
-        formDataToSend.append('diplome', formData.diplome);
-      }
-
-      // Ajout de l'année d'obtention si elle existe
-      if (formData.annee_obtention) {
-        formDataToSend.append('annee_obtention', formData.annee_obtention);
-      }
-
-      // Log pour déboguer
-      console.log('FormData entries:');
-      for (let pair of formDataToSend.entries()) {
-        console.log(pair[0] + ': ' + pair[1]);
-      }
-
-      const url = candidat 
-        ? `http://localhost:5000/candidat/updateCandidatsBYID/${candidat._id}`
-        : 'http://localhost:5000/candidat/addCandidats';
-
-      const response = await fetch(url, {
-        method: candidat ? 'PUT' : 'POST',
-        body: formDataToSend,
-        credentials: 'include'
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Erreur lors de l\'enregistrement');
-      }
-
-      onSuccess();
     } catch (error) {
       console.error('Error submitting form:', error);
       setError(error.message);

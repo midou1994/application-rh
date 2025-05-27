@@ -321,6 +321,53 @@ const Personnel = () => {
           userData.password = formData.password;
         }
 
+        // Check if we have a valid user ID
+        if (!selectedPersonnel.user) {
+          // Try to find user by email first
+          const userByEmailResponse = await fetch(`http://localhost:5000/users/getUserByEmail/${formData.email}`, {
+            credentials: 'include'
+          });
+          
+          if (userByEmailResponse.ok) {
+            const userData = await userByEmailResponse.json();
+            selectedPersonnel.user = userData._id;
+          } else {
+            // If not found by email, try to find by name
+            const userByNameResponse = await fetch(`http://localhost:5000/users/getUserByName/${formData.nom}/${formData.prenom}`, {
+              credentials: 'include'
+            });
+            
+            if (userByNameResponse.ok) {
+              const userData = await userByNameResponse.json();
+              selectedPersonnel.user = userData._id;
+            } else {
+              // If still not found, create a new user
+              const newUserResponse = await fetch('http://localhost:5000/users/addEmploye', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({
+                  ...userData,
+                  password: formData.password || 'defaultPassword123' // Set a default password if none provided
+                }),
+              });
+
+              if (!newUserResponse.ok) {
+                throw new Error('Erreur lors de la création d\'un nouvel utilisateur');
+              }
+
+              const newUserData = await newUserResponse.json();
+              selectedPersonnel.user = newUserData._id;
+            }
+          }
+        }
+
+        if (!selectedPersonnel.user) {
+          throw new Error('Impossible de trouver ou créer un utilisateur associé à cet employé');
+        }
+
         console.log('Updating user with ID:', selectedPersonnel.user);
         const userResponse = await fetch(`http://localhost:5000/users/updateUser/${selectedPersonnel.user}`, {
           method: 'PUT',
