@@ -61,7 +61,8 @@ const EntretienList = () => {
     commantaire_recruteur: '',
     note: '',
     decision: 'Réserve',
-    candidat: ''
+    candidat: '',
+    rendezVousId: ''
   });
   const [snackbar, setSnackbar] = useState({
     open: false,
@@ -144,7 +145,8 @@ const EntretienList = () => {
       commantaire_recruteur: '',
       note: '',
       decision: 'Réserve',
-      candidat: entretien.candidat._id
+      candidat: entretien.candidat._id,
+      rendezVousId: entretien._id
     });
     setOpenEvaluationDialog(true);
   };
@@ -166,7 +168,10 @@ const EntretienList = () => {
       console.log('All fiches:', fiches);
       
       // Find the fiche that matches this entretien's candidat
-      const matchingFiche = fiches.find(fiche => fiche.candidat === entretien.candidat._id);
+      const matchingFiche = fiches.find(fiche => 
+        fiche.candidat && 
+        (fiche.candidat._id === entretien.candidat._id || fiche.candidat === entretien.candidat._id)
+      );
       console.log('Matching fiche:', matchingFiche);
       
       if (!matchingFiche) {
@@ -247,6 +252,7 @@ const EntretienList = () => {
   const handleEvaluationSubmit = async (e) => {
     e.preventDefault();
     try {
+      // First, add the evaluation fiche
       const response = await fetch('http://localhost:5000/ficheentretient/addFicheEntretient', {
         method: 'POST',
         headers: {
@@ -261,10 +267,25 @@ const EntretienList = () => {
         throw new Error(errorData.message || 'Erreur lors de l\'ajout de l\'évaluation');
       }
 
+      // Then, update the rendez-vous status to "Terminé" using the correct rendez-vous ID
+      const rendezVousResponse = await fetch(`http://localhost:5000/rendezvous/updateRendezVous/${evaluationData.rendezVousId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ statut: 'Terminé' }),
+        credentials: 'include'
+      });
+
+      if (!rendezVousResponse.ok) {
+        throw new Error('Erreur lors de la mise à jour du statut du rendez-vous');
+      }
+
       setOpenEvaluationDialog(false);
+      fetchEntretiens(); // Refresh the list to show updated status
       setSnackbar({
         open: true,
-        message: 'Évaluation ajoutée avec succès',
+        message: 'Évaluation ajoutée et rendez-vous terminé avec succès',
         severity: 'success'
       });
     } catch (err) {
